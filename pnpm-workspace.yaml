@@ -22,12 +22,12 @@ catalog:
   groq-js: ^1.30.1
 
   # Sanity
-  sanity: ^5.23.0
-  '@sanity/vision': ^5.23.0
-  '@sanity/types': ^5.23.0
-  '@sanity/schema': ^5.23.0
+  sanity: ^5.25.1
+  '@sanity/vision': ^5.25.1
+  '@sanity/types': ^5.25.1
+  '@sanity/schema': ^5.25.1
   '@sanity/client': ^7.22.0
-  '@sanity/codegen': ^6.0.3
+  '@sanity/codegen': ^6.1.0
   '@sanity/telemetry': ^0.9.0
 
   # Build & Development Tools
