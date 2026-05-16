@@ -71,5 +71,3 @@ jobs:
             { "www.sanity.io": "https://www.sanity.io" }
           template-vars: |
             { "cliInstall": "${{ steps.cli.outputs.install }}" }
-          # Skip the duplicate commit-status check; sticky PR comment + workflow check are enough.
-          skip-status: true
