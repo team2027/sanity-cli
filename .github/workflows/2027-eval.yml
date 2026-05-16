@@ -14,7 +14,7 @@ env:
 
 jobs:
   eval:
-    if: github.event.label.name == 'trigger: preview'
+    if: "github.event.label.name == 'trigger: preview'"
     runs-on: ubuntu-latest
     steps:
       - name: Wait for pkg-pr-new on this SHA
