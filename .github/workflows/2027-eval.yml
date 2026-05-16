@@ -1,7 +1,7 @@
 name: 2027 eval
 on:
   pull_request:
-    types: [labeled]
+    types: [labeled, synchronize, opened, reopened]
 
 permissions:
   pull-requests: write
@@ -17,6 +17,12 @@ jobs:
     if: "contains(github.event.pull_request.labels.*.name, 'trigger: preview')"
     runs-on: ubuntu-latest
     steps:
+      - name: Debug
+        run: |
+          echo "Event: ${{ github.event_name }}"
+          echo "Action: ${{ github.event.action }}"
+          echo "Labels: ${{ toJSON(github.event.pull_request.labels.*.name) }}"
+
       - name: Wait for pkg-pr-new on this SHA
         env:
           GH_TOKEN: ${{ github.token }}
