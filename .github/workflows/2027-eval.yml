@@ -86,5 +86,9 @@ jobs:
         with:
           api-key: ${{ secrets.EVALS_API_KEY }}
           prompt-id: ${{ env.PROMPT_ID }}
+          # Dummy url-map: server still requires non-empty urlMap even when
+          # the prompt uses template-vars. No-op rewrite of www.sanity.io.
+          url-map: |
+            { "www.sanity.io": "https://www.sanity.io" }
           template-vars: |
             { "cliInstall": "${{ steps.cli.outputs.install }}" }
