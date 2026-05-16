@@ -1,14 +1,7 @@
 name: 2027 eval
 on:
-  workflow_run:
-    workflows: ["Publish Preview Packages"]
-    types: [completed]
-  workflow_dispatch:
-    inputs:
-      pr:
-        description: PR number to evaluate (uses current head SHA)
-        required: true
-        type: string
+  pull_request:
+    types: [labeled]
 
 permissions:
   pull-requests: write
@@ -21,73 +14,53 @@ env:
 
 jobs:
   eval:
-    if: |
-      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'pull_request') ||
-      github.event_name == 'workflow_dispatch'
+    if: github.event.label.name == 'trigger: preview'
     runs-on: ubuntu-latest
     steps:
-      - name: Resolve PR + SHA
-        id: ctx
+      - name: Wait for pkg-pr-new on this SHA
         env:
           GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           set -euo pipefail
-          if [ "${GITHUB_EVENT_NAME}" = "workflow_dispatch" ]; then
-            PR_NUMBER="${{ inputs.pr }}"
-            SHA=$(gh pr view "$PR_NUMBER" --repo "$GITHUB_REPOSITORY" --json headRefOid -q .headRefOid)
-            MANUAL=1
-          else
-            PR_NUMBER=$(jq -r '.workflow_run.pull_requests[0].number // empty' "$GITHUB_EVENT_PATH")
-            SHA="${{ github.event.workflow_run.head_sha }}"
-            MANUAL=0
-            if [ -z "$PR_NUMBER" ]; then
-              PR_NUMBER=$(gh pr list --repo "$GITHUB_REPOSITORY" --state open --search "$SHA" --json number,headRefOid \
-                --jq ".[] | select(.headRefOid==\"$SHA\") | .number" | head -n1)
+          for i in $(seq 1 30); do
+            RESULT=$(gh run list --repo "$GITHUB_REPOSITORY" \
+              --workflow "Publish Preview Packages" \
+              --commit "$SHA" \
+              --json status,conclusion --limit 5 \
+              --jq '[.[] | select(.status=="completed")] | .[0] // {}')
+            STATUS=$(echo "$RESULT" | jq -r '.status // empty')
+            CONCLUSION=$(echo "$RESULT" | jq -r '.conclusion // empty')
+            if [ "$CONCLUSION" = "success" ]; then
+              echo "pkg-pr-new succeeded on $SHA"
+              exit 0
             fi
-          fi
-          if [ -z "$PR_NUMBER" ]; then
-            echo "::notice::No PR found for SHA $SHA, exiting"
-            exit 0
-          fi
-          echo "pr=$PR_NUMBER" >> "$GITHUB_OUTPUT"
-          echo "sha=$SHA" >> "$GITHUB_OUTPUT"
-          echo "manual=$MANUAL" >> "$GITHUB_OUTPUT"
-
-      - name: Skip if already evaluated (auto only)
-        id: gate
-        if: steps.ctx.outputs.pr != '' && steps.ctx.outputs.manual == '0'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          PR: ${{ steps.ctx.outputs.pr }}
-        run: |
-          set -euo pipefail
-          MARKER="<!-- 2027-eval-comment:${PROMPT_ID} -->"
-          if gh api "repos/$GITHUB_REPOSITORY/issues/$PR/comments" --paginate \
-               --jq '.[].body' | grep -qF "$MARKER"; then
-            echo "Prior eval comment found for this prompt, skipping auto run"
-            echo "skip=1" >> "$GITHUB_OUTPUT"
-          fi
+            if [ "$STATUS" = "completed" ] && [ "$CONCLUSION" != "success" ]; then
+              echo "::error::pkg-pr-new finished with conclusion=$CONCLUSION — aborting eval"
+              exit 1
+            fi
+            echo "waiting for pkg-pr-new on $SHA (attempt $i/30)..."
+            sleep 20
+          done
+          echo "::error::Timed out waiting for pkg-pr-new"
+          exit 1
 
       - name: Compute cliInstall
         id: cli
-        if: steps.ctx.outputs.pr != '' && steps.gate.outputs.skip != '1'
         env:
-          SHA: ${{ steps.ctx.outputs.sha }}
+          SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           set -euo pipefail
-          SHORT_SHA="${SHA:0:7}"
-          CLI_URL="https://pkg.pr.new/${GITHUB_REPOSITORY}/@sanity/cli@${SHORT_SHA}"
-          echo "install=npm i -g ${CLI_URL}" >> "$GITHUB_OUTPUT"
+          echo "install=npm i -g https://pkg.pr.new/${GITHUB_REPOSITORY}/@sanity/cli@${SHA:0:7}" >> "$GITHUB_OUTPUT"
 
       - name: Run 2027 eval
-        if: steps.ctx.outputs.pr != '' && steps.gate.outputs.skip != '1'
         # Pinned to team2027/evals-action#5 head until template-vars ships in a tag
         uses: team2027/evals-action@e6a0d33b831192586916320664d056066822c747
         with:
           api-key: ${{ secrets.EVALS_API_KEY }}
           prompt-id: ${{ env.PROMPT_ID }}
           # Dummy url-map: server still requires non-empty urlMap even when
-          # the prompt uses template-vars. No-op rewrite of www.sanity.io.
+          # template-vars is set. No-op rewrite of www.sanity.io.
           url-map: |
             { "www.sanity.io": "https://www.sanity.io" }
           template-vars: |
