@@ -61,7 +61,7 @@ jobs:
 
       - name: Run 2027 eval
         # Pinned to team2027/evals-action#5 head until template-vars ships in a tag
-        uses: team2027/evals-action@e6a0d33b831192586916320664d056066822c747
+        uses: team2027/evals-action@47d8d95db91cdf4f357436b6823e01683194197b
         with:
           api-key: ${{ secrets.EVALS_API_KEY }}
           prompt-id: ${{ env.PROMPT_ID }}
