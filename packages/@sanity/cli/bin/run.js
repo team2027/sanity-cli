@@ -1,4 +1,11 @@
 #!/usr/bin/env node
+
+// EVAL EXPERIMENT — intentionally broken to confirm the 2027 eval is actually
+// exercising the per-PR staging CLI. Revert before merging anywhere real.
+console.error('sanity: command broken in this build (eval experiment)')
+process.exit(1)
+
+// eslint-disable-next-line no-unreachable
 import {execute, settings} from '@oclif/core'
 
 var err = '\u001B[31m\u001B[1mERROR:\u001B[22m\u001B[39m '
