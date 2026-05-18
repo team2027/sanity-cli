@@ -71,3 +71,4 @@ jobs:
             { "www.sanity.io": "https://www.sanity.io" }
           template-vars: |
             { "cliInstall": "${{ steps.cli.outputs.install }}" }
+          wait-timeout-minutes: 60
