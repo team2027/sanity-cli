@@ -30,22 +30,25 @@ jobs:
         run: |
           set -euo pipefail
           for i in $(seq 1 30); do
-            RESULT=$(gh run list --repo "$GITHUB_REPOSITORY" \
+            # Look at all completed runs for this SHA; success wins, failure aborts,
+            # cancelled keeps polling (pkg-pr-new's concurrency group cancels earlier
+            # runs when a new label event fires a newer one).
+            CONCLUSIONS=$(gh run list --repo "$GITHUB_REPOSITORY" \
               --workflow "Publish Preview Packages" \
               --commit "$SHA" \
-              --json status,conclusion --limit 5 \
-              --jq '[.[] | select(.status=="completed")] | .[0] // {}')
-            STATUS=$(echo "$RESULT" | jq -r '.status // empty')
-            CONCLUSION=$(echo "$RESULT" | jq -r '.conclusion // empty')
-            if [ "$CONCLUSION" = "success" ]; then
-              echo "pkg-pr-new succeeded on $SHA"
-              exit 0
-            fi
-            if [ "$STATUS" = "completed" ] && [ "$CONCLUSION" != "success" ]; then
-              echo "::error::pkg-pr-new finished with conclusion=$CONCLUSION — aborting eval"
-              exit 1
-            fi
-            echo "waiting for pkg-pr-new on $SHA (attempt $i/30)..."
+              --json status,conclusion --limit 10 \
+              --jq '[.[] | select(.status=="completed") | .conclusion] | join(",")')
+            case ",$CONCLUSIONS," in
+              *,success,*)
+                echo "pkg-pr-new succeeded on $SHA"
+                exit 0
+                ;;
+              *,failure,*|*,timed_out,*|*,startup_failure,*)
+                echo "::error::pkg-pr-new finished with a hard failure ($CONCLUSIONS) — aborting eval"
+                exit 1
+                ;;
+            esac
+            echo "waiting for pkg-pr-new on $SHA (attempt $i/30, conclusions so far: $CONCLUSIONS)..."
             sleep 20
           done
           echo "::error::Timed out waiting for pkg-pr-new"
