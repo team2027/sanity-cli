@@ -63,9 +63,9 @@ jobs:
           echo "install=npm i -g https://pkg.pr.new/${GITHUB_REPOSITORY}/@sanity/cli@${SHA:0:7}" >> "$GITHUB_OUTPUT"
 
       - name: Run 2027 eval
-        # team2027/evals-action@v0.5.0 — SHA-pinned per GitHub's hardening guidance
+        # team2027/evals-action@v0.6.0 — SHA-pinned per GitHub's hardening guidance
         # for third-party actions that handle secrets.
-        uses: team2027/evals-action@a6cff23bd32d13765bb9c5c117c63f917b4b8cbc
+        uses: team2027/evals-action@f9c25786d4e14756afa82bca91fbe0a43cf73ef3
         with:
           api-key: ${{ secrets.EVALS_API_KEY }}
           prompt-id: ${{ env.PROMPT_ID }}
