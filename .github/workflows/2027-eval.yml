@@ -3,10 +3,15 @@ on:
   pull_request:
     types: [labeled, synchronize, opened, reopened]
   issue_comment:
-    types: [created, edited]
+    types: [created]
 
+# Concurrency note: GitHub evaluates concurrency BEFORE the job's `if:`,
+# so keying off issue.number means unrelated bot comments on the same PR
+# (e.g. claude[bot], dependabot) cancel an in-flight eval even when their
+# bodies fail the @2027dev filter. Key on comment.id instead so each
+# comment is its own group; pull_request events still group by head_ref.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.issue.number || github.head_ref || github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.comment.id || github.head_ref || github.ref }}
   cancel-in-progress: true
 
 permissions:
