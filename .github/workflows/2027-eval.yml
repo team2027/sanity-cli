@@ -3,9 +3,12 @@ on:
   pull_request:
     types: [labeled, synchronize, opened, reopened]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
 permissions:
   pull-requests: write
-  issues: write
   statuses: write
   contents: read
 
@@ -17,41 +20,38 @@ jobs:
     if: "contains(github.event.pull_request.labels.*.name, 'trigger: preview')"
     runs-on: ubuntu-latest
     steps:
-      - name: Debug
-        run: |
-          echo "Event: ${{ github.event_name }}"
-          echo "Action: ${{ github.event.action }}"
-          echo "Labels: ${{ toJSON(github.event.pull_request.labels.*.name) }}"
-
       - name: Wait for pkg-pr-new on this SHA
         env:
           GH_TOKEN: ${{ github.token }}
           SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           set -euo pipefail
+          # Poll pkg-pr-new's "Continuous Releases" commit status. This is
+          # pkg-pr-new's authoritative "package is uploaded and reachable"
+          # signal — stronger than our internal publish workflow exiting 0.
+          # success wins, hard failure aborts, anything else keeps polling.
           for i in $(seq 1 30); do
-            # Look at all completed runs for this SHA; success wins, failure aborts,
-            # cancelled keeps polling (pkg-pr-new's concurrency group cancels earlier
-            # runs when a new label event fires a newer one).
-            CONCLUSIONS=$(gh run list --repo "$GITHUB_REPOSITORY" \
-              --workflow "Publish Preview Packages" \
-              --commit "$SHA" \
-              --json status,conclusion --limit 10 \
-              --jq '[.[] | select(.status=="completed") | .conclusion] | join(",")')
-            case ",$CONCLUSIONS," in
-              *,success,*)
+            STATE=$(gh api "repos/$GITHUB_REPOSITORY/commits/$SHA/check-runs" \
+              --jq '
+                [.check_runs[] | select(.name == "Continuous Releases")] as $c
+                | if any($c[]; .conclusion == "success") then "success"
+                  elif any($c[]; .conclusion == "failure" or .conclusion == "timed_out" or .conclusion == "action_required") then "hard_fail"
+                  else "pending" end
+              ')
+            case "$STATE" in
+              success)
                 echo "pkg-pr-new succeeded on $SHA"
                 exit 0
                 ;;
-              *,failure,*|*,timed_out,*|*,startup_failure,*)
-                echo "::error::pkg-pr-new finished with a hard failure ($CONCLUSIONS) — aborting eval"
+              hard_fail)
+                echo "::error::pkg-pr-new failed on $SHA — aborting eval"
                 exit 1
                 ;;
             esac
-            echo "waiting for pkg-pr-new on $SHA (attempt $i/30, conclusions so far: $CONCLUSIONS)..."
+            echo "waiting for Continuous Releases on $SHA (attempt $i/30, state: $STATE)..."
             sleep 20
           done
-          echo "::error::Timed out waiting for pkg-pr-new"
+          echo "::error::Timed out waiting for Continuous Releases — is the pkg-pr-new GitHub App installed on $GITHUB_REPOSITORY?"
           exit 1
 
       - name: Compute cliInstall
@@ -63,11 +63,13 @@ jobs:
           echo "install=npm i -g https://pkg.pr.new/${GITHUB_REPOSITORY}/@sanity/cli@${SHA:0:7}" >> "$GITHUB_OUTPUT"
 
       - name: Run 2027 eval
-        uses: team2027/evals-action@v0.5.0
+        # team2027/evals-action@v0.5.0 — SHA-pinned per GitHub's hardening guidance
+        # for third-party actions that handle secrets.
+        uses: team2027/evals-action@a6cff23bd32d13765bb9c5c117c63f917b4b8cbc
         with:
           api-key: ${{ secrets.EVALS_API_KEY }}
           prompt-id: ${{ env.PROMPT_ID }}
-          # Dummy url-map: server still requires non-empty urlMap even when
+          # Dummy url-map: server requires non-empty urlMap even when
           # template-vars is set. No-op rewrite of www.sanity.io.
           url-map: |
             { "www.sanity.io": "https://www.sanity.io" }
