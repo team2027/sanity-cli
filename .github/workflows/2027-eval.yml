@@ -2,9 +2,11 @@ name: 2027 eval
 on:
   pull_request:
     types: [labeled, synchronize, opened, reopened]
+  issue_comment:
+    types: [created, edited]
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.issue.number || github.head_ref || github.ref }}
   cancel-in-progress: true
 
 permissions:
@@ -17,13 +19,43 @@ env:
 
 jobs:
   eval:
-    if: "contains(github.event.pull_request.labels.*.name, 'trigger: preview')"
+    # Fires on:
+    # - any labeled/synchronize/opened/reopened PR that carries the
+    #   `trigger: preview` label (existing behavior)
+    # - any PR comment that mentions @2027dev (new — issue_comment loads
+    #   the workflow from the default branch, so this YAML must be on main)
+    if: >-
+      (github.event_name == 'pull_request' &&
+        contains(github.event.pull_request.labels.*.name, 'trigger: preview')) ||
+      (github.event_name == 'issue_comment' &&
+        github.event.issue.pull_request &&
+        contains(github.event.comment.body, '@2027dev'))
     runs-on: ubuntu-latest
     steps:
+      # Resolve the PR head sha. pull_request payloads carry it directly;
+      # issue_comment doesn't, so fetch via pulls.get. Downstream steps key
+      # off steps.pr.outputs.sha so they stay event-agnostic.
+      - name: Resolve PR head sha
+        id: pr
+        uses: actions/github-script@v9
+        with:
+          script: |
+            if (context.eventName === 'pull_request') {
+              core.setOutput('sha', context.payload.pull_request.head.sha)
+              core.setOutput('number', String(context.payload.pull_request.number))
+              return
+            }
+            const { data: pr } = await github.rest.pulls.get({
+              ...context.repo,
+              pull_number: context.payload.issue.number,
+            })
+            core.setOutput('sha', pr.head.sha)
+            core.setOutput('number', String(pr.number))
+
       - name: Wait for pkg-pr-new on this SHA
         env:
           GH_TOKEN: ${{ github.token }}
-          SHA: ${{ github.event.pull_request.head.sha }}
+          SHA: ${{ steps.pr.outputs.sha }}
         run: |
           set -euo pipefail
           # Poll pkg-pr-new's "Continuous Releases" commit status. This is
@@ -57,15 +89,15 @@ jobs:
       - name: Compute cliInstall
         id: cli
         env:
-          SHA: ${{ github.event.pull_request.head.sha }}
+          SHA: ${{ steps.pr.outputs.sha }}
         run: |
           set -euo pipefail
           echo "install=npm i -g https://pkg.pr.new/${GITHUB_REPOSITORY}/@sanity/cli@${SHA:0:7}" >> "$GITHUB_OUTPUT"
 
       - name: Run 2027 eval
-        # team2027/evals-action@v0.6.0 — SHA-pinned per GitHub's hardening guidance
-        # for third-party actions that handle secrets.
-        uses: team2027/evals-action@f9c25786d4e14756afa82bca91fbe0a43cf73ef3
+        # Pinned to team2027/evals-action#12 (issue_comment support) — swap
+        # to v0.7.0 after that PR merges and tags.
+        uses: team2027/evals-action@ae5b2efeec7f0477ceb0e5a9d089215ac87ebf1a
         with:
           api-key: ${{ secrets.EVALS_API_KEY }}
           prompt-id: ${{ env.PROMPT_ID }}
