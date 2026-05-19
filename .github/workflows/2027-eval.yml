@@ -63,8 +63,7 @@ jobs:
           echo "install=npm i -g https://pkg.pr.new/${GITHUB_REPOSITORY}/@sanity/cli@${SHA:0:7}" >> "$GITHUB_OUTPUT"
 
       - name: Run 2027 eval
-        # Pinned to template-vars merge SHA — bump to v0.3+ once tagged
-        uses: team2027/evals-action@a6cff23bd32d13765bb9c5c117c63f917b4b8cbc
+        uses: team2027/evals-action@v0.5.0
         with:
           api-key: ${{ secrets.EVALS_API_KEY }}
           prompt-id: ${{ env.PROMPT_ID }}
