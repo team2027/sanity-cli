@@ -1,5 +1,6 @@
 import path, {isAbsolute} from 'node:path'
 
+import {runSchemaExtraction, SchemaExtractionError} from '@sanity/cli-build/_internal'
 import {type CLITelemetryStore} from '@sanity/cli-core'
 import {logSymbols} from '@sanity/cli-core/ux'
 import debounce from 'lodash-es/debounce.js'
@@ -7,14 +8,12 @@ import mean from 'lodash-es/mean.js'
 import once from 'lodash-es/once.js'
 import {type Plugin} from 'vite'
 
-import {formatSchemaValidation} from '../../actions/schema/formatSchemaValidation.js'
-import {createSchemaPatternMatcher} from '../../actions/schema/matchSchemaPattern.js'
-import {runSchemaExtraction} from '../../actions/schema/runSchemaExtraction.js'
-import {SchemaExtractionError} from '../../actions/schema/utils/SchemaExtractionError.js'
 import {
   SchemaExtractedTrace,
   SchemaExtractionWatchModeTrace,
-} from '../../telemetry/extractSchema.telemetry.js'
+} from '../../../telemetry/extractSchema.telemetry.js'
+import {formatSchemaValidation} from '../formatSchemaValidation.js'
+import {createSchemaPatternMatcher} from '../matchSchemaPattern.js'
 
 /**
  * Default glob patterns to watch for schema changes.
