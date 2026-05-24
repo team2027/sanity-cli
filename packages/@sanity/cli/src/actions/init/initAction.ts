@@ -367,7 +367,7 @@ async function ensureAuthenticated(
 
   if (options.unattended) {
     throw new InitError(
-      'Must be logged in to run this command in unattended mode, run `sanity login`',
+      'Must be logged in to run this command in unattended mode, run `sanity login` or set the SANITY_AUTH_TOKEN environment variable',
       1,
     )
   }

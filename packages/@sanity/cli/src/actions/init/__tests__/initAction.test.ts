@@ -207,7 +207,7 @@ describe('initAction (direct)', () => {
     expect(caughtError).toBeInstanceOf(InitError)
     const initError = caughtError as InitError
     expect(initError.message).toBe(
-      'Must be logged in to run this command in unattended mode, run `sanity login`',
+      'Must be logged in to run this command in unattended mode, run `sanity login` or set the SANITY_AUTH_TOKEN environment variable',
     )
     expect(initError.exitCode).toBe(1)
   })

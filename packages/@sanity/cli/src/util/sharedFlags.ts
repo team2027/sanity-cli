@@ -60,6 +60,17 @@ export function getProjectIdFlag(options: SharedFlagOptions) {
         return trimmed
       },
     }),
+    // Hidden alias so that `--project <id>` works as a synonym for `--project-id <id>`
+    project: Flags.string({
+      hidden: true,
+      parse: async (input: string) => {
+        const trimmed = input.trim()
+        if (trimmed === '') {
+          throw new Error('`--project` cannot be empty if provided')
+        }
+        return trimmed
+      },
+    }),
   }
 }
 

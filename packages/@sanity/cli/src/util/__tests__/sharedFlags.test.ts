@@ -58,6 +58,21 @@ describe('getProjectIdFlag', () => {
     await expect(invoke('  abc  ')).resolves.toBe('abc')
     await expect(invoke('  ')).rejects.toThrow('cannot be empty')
   })
+
+  test('includes hidden project alias flag', () => {
+    const flags = getProjectIdFlag({semantics: 'override'})
+    expect(flags.project).toBeDefined()
+    expect(flags.project.hidden).toBe(true)
+  })
+
+  test('project alias parse trims and validates non-empty', async () => {
+    const flags = getProjectIdFlag({semantics: 'override'})
+    const parse = flags.project.parse!
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- testing parse in isolation, context/opts not used
+    const invoke = (input: string) => parse(input, {} as any, {} as any)
+    await expect(invoke('  abc  ')).resolves.toBe('abc')
+    await expect(invoke('  ')).rejects.toThrow('cannot be empty')
+  })
 })
 
 describe('getDatasetFlag', () => {

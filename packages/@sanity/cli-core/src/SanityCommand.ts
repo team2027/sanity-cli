@@ -139,6 +139,13 @@ export abstract class SanityCommand<T extends typeof Command> extends Command {
       if (flagProjectId) return flagProjectId
     }
 
+    // Check --project (hidden alias for --project-id)
+    const projectAlias =
+      'project' in this.flags && typeof this.flags.project === 'string'
+        ? this.flags.project
+        : undefined
+    if (projectAlias) return projectAlias
+
     // Check deprecated flag (e.g. --project) before CLI config
     if (options?.deprecatedFlagName) {
       const deprecatedValue =

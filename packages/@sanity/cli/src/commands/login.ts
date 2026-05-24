@@ -30,6 +30,10 @@ export class LoginCommand extends SanityCommand<typeof LoginCommand> {
       command: '<%= config.bin %> <%= command.id %> --with-token < token.txt',
       description: 'Log in using a token from standard input',
     },
+    {
+      command: 'SANITY_AUTH_TOKEN=<token> <%= config.bin %> init --yes',
+      description: 'Skip login entirely by setting a token as an environment variable',
+    },
   ]
   static override flags = {
     experimental: Flags.boolean({

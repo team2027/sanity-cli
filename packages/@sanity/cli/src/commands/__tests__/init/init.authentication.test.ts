@@ -193,7 +193,7 @@ describe('#init: authentication', () => {
     })
 
     expect(error?.message).toContain(
-      'Must be logged in to run this command in unattended mode, run `sanity login`',
+      'Must be logged in to run this command in unattended mode, run `sanity login` or set the SANITY_AUTH_TOKEN environment variable',
     )
     expect(error?.oclif?.exit).toBe(1)
   })
