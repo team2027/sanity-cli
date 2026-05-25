@@ -19,12 +19,20 @@ export class List extends SanityCommand<typeof List> {
       description: 'List projects',
     },
     {
+      command: '<%= config.bin %> <%= command.id %> --json',
+      description: 'List projects in JSON format',
+    },
+    {
       command: '<%= config.bin %> <%= command.id %> --sort=members --order=asc',
       description: 'List projects sorted by member count, ascending',
     },
   ]
 
   static override flags = {
+    json: Flags.boolean({
+      default: false,
+      description: 'Output projects in JSON format',
+    }),
     order: Flags.string({
       default: 'desc',
       description: 'Sort direction',
@@ -40,10 +48,28 @@ export class List extends SanityCommand<typeof List> {
   static override hiddenAliases: string[] = ['project:list']
 
   public async run() {
-    const {order, sort} = this.flags
+    const {json, order, sort} = this.flags
 
     try {
       const projects = await listProjects()
+
+      if (json) {
+        this.log(
+          JSON.stringify(
+            projects.map(({createdAt, displayName, id, members = []}) => ({
+              id,
+              name: displayName,
+              members: members.length,
+              url: `https://www.sanity.io/manage/project/${id}`,
+              created: createdAt,
+            })),
+            null,
+            2,
+          ),
+        )
+        return
+      }
+
       const ordered = sortBy(
         projects.map(({createdAt, displayName, id, members = []}) => {
           const manage = `https://www.sanity.io/manage/project/${id}`

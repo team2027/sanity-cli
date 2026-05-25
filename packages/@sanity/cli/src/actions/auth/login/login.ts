@@ -25,6 +25,7 @@ interface LoginOptions {
   telemetry: CLITelemetryStore
 
   experimental?: boolean
+  forceBrowser?: boolean
   open?: boolean
   provider?: string
   sso?: string
@@ -80,16 +81,17 @@ export async function login(options: LoginOptions) {
   trace.log({step: 'waitForToken'})
 
   // Open a browser on the login page (or tell the user to)
-  const shouldLaunchBrowser = canLaunchBrowser() && options.open !== false
-  const actionText = shouldLaunchBrowser ? 'Opening browser at' : 'Please open a browser at'
-
-  output.log(`\n${actionText} ${loginUrl.href}\n`)
-
-  const spin = spinner('Waiting for browser login to complete... Press Ctrl + C to cancel').start()
+  const shouldLaunchBrowser = (options.forceBrowser || canLaunchBrowser()) && options.open !== false
+  let browserOpened = false
 
   if (shouldLaunchBrowser) {
     open(loginUrl.href)
+    output.log(`\nOpening browser at ${loginUrl.href}\n`)
+  } else {
+    output.log(`\nPlease open a browser at ${loginUrl.href}\n`)
   }
+
+  const spin = spinner('Waiting for browser login to complete... Press Ctrl + C to cancel').start()
 
   // Wait for a success/error on the HTTP callback server
   let authToken: string

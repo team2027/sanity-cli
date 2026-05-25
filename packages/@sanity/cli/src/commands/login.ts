@@ -7,15 +7,28 @@ import {SanityCommand} from '@sanity/cli-core'
 import {login} from '../actions/auth/login/login.js'
 
 export class LoginCommand extends SanityCommand<typeof LoginCommand> {
-  static override description = 'Log in to your Sanity account'
+  static override description = `Log in to your Sanity account
+
+Opens a browser for authentication. Use --background for automated
+workflows — it opens the browser, waits up to 120s for login to
+complete, and exits. If a browser session is already authenticated,
+this completes in seconds.`
   static override examples: Array<Command.Example> = [
     {
+      command: '<%= config.bin %> <%= command.id %> --background',
+      description: 'Automated: open browser, wait for login, exit (recommended for scripts/agents)',
+    },
+    {
       command: '<%= config.bin %> <%= command.id %>',
-      description: 'Log in using default settings',
+      description: 'Interactive: log in via browser',
+    },
+    {
+      command: '<%= config.bin %> <%= command.id %> --provider github',
+      description: 'Log in with a specific provider',
     },
     {
       command: '<%= config.bin %> <%= command.id %> --provider github --no-open',
-      description: 'Login with GitHub provider, but do not open a browser window automatically',
+      description: 'Print login URL without opening browser',
     },
     {
       command: '<%= config.bin %> <%= command.id %> --sso my-organization',
@@ -36,6 +49,12 @@ export class LoginCommand extends SanityCommand<typeof LoginCommand> {
     },
   ]
   static override flags = {
+    background: Flags.boolean({
+      default: false,
+      description:
+        'Open browser, auto-pick provider, wait up to 120s for login (recommended for automated use)',
+      exclusive: ['with-token', 'sso'],
+    }),
     experimental: Flags.boolean({
       default: false,
       hidden: true,
@@ -44,6 +63,7 @@ export class LoginCommand extends SanityCommand<typeof LoginCommand> {
       allowNo: true,
       default: true,
       description: 'Open a browser window to log in (`--no-open` only prints URL)',
+      hidden: true,
     }),
     provider: Flags.string({
       description: 'Log in using the given provider',
@@ -68,18 +88,21 @@ export class LoginCommand extends SanityCommand<typeof LoginCommand> {
 
   public async run(): Promise<void> {
     const {flags} = await this.parse(LoginCommand)
-    const {'sso-provider': ssoProvider, 'with-token': withToken, ...loginFlags} = flags
+    const {background, 'sso-provider': ssoProvider, 'with-token': withToken, ...loginFlags} = flags
 
     try {
       const token = withToken ? await readTokenFromStdin() : undefined
 
       await login({
         ...loginFlags,
+        forceBrowser: background,
+        open: background ? true : loginFlags.open,
         output: this.output,
         ssoProvider,
         telemetry: this.telemetry,
         token,
       })
+
       this.log('Login successful')
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)

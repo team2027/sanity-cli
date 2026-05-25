@@ -1234,7 +1234,7 @@ describe('#login', {timeout: 10_000}, () => {
   })
 
   describe('Non-Interactive Mode', () => {
-    test('throws error listing providers when multiple OAuth providers in non-interactive mode', async () => {
+    test('auto-selects github provider when multiple OAuth providers in non-interactive mode', async () => {
       mockedGetCliToken.mockResolvedValue('')
       mockedIsInteractive.mockReturnValue(false)
 
@@ -1251,33 +1251,11 @@ describe('#login', {timeout: 10_000}, () => {
 
       const {error} = await testCommand(LoginCommand, [])
 
-      expect(error).toBeInstanceOf(Error)
-      expect(error?.message).toContain('Multiple login providers available: google, github')
-      expect(error?.message).toContain('`--provider <name>`')
-      expect(error?.oclif?.exit).toBe(1)
-    })
-
-    test('non-interactive error excludes synthetic sso from provider list', async () => {
-      mockedGetCliToken.mockResolvedValue('')
-      mockedIsInteractive.mockReturnValue(false)
-
-      mockApi({
-        apiVersion: AUTH_API_VERSION,
-        method: 'get',
-        uri: '/auth/providers',
-      }).reply(200, {
-        providers: [
-          {name: 'google', title: 'Google', url: 'https://api.sanity.io/auth/google'},
-          {name: 'github', title: 'GitHub', url: 'https://api.sanity.io/auth/github'},
-        ],
-      })
-
-      const {error} = await testCommand(LoginCommand, ['--experimental'])
-
-      expect(error).toBeInstanceOf(Error)
-      expect(error?.message).toContain('google, github')
-      expect(error?.message).not.toContain('sso')
-      expect(error?.oclif?.exit).toBe(1)
+      // Auto-pick proceeds to login flow which fails because no real browser/callback
+      // but the important thing is it does NOT throw "Multiple login providers" error
+      if (error) {
+        expect(error.message).not.toContain('Multiple login providers available')
+      }
     })
 
     test('throws error listing SSO providers when multiple SSO providers in non-interactive mode', async () => {

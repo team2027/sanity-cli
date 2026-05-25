@@ -124,6 +124,49 @@ describe('#list', () => {
     expect(line2023_01_02).toBeLessThan(line2023_01_03)
   })
 
+  test('outputs JSON when --json is specified', async () => {
+    const projects = [
+      {
+        createdAt: '2023-01-01',
+        displayName: 'Project One',
+        id: 'project1',
+        members: ['user1', 'user2'],
+      },
+      {
+        createdAt: '2023-01-02',
+        displayName: 'Project Two',
+        id: 'project2',
+        members: ['user1'],
+      },
+    ]
+
+    mockApi({
+      apiVersion: PROJECTS_API_VERSION,
+      query: {onlyExplicitMembership: 'true'},
+      uri: '/projects',
+    }).reply(200, projects)
+
+    const {stdout} = await testCommand(List, ['--json'])
+
+    const parsed = JSON.parse(stdout)
+    expect(parsed).toEqual([
+      {
+        id: 'project1',
+        name: 'Project One',
+        members: 2,
+        url: 'https://www.sanity.io/manage/project/project1',
+        created: '2023-01-01',
+      },
+      {
+        id: 'project2',
+        name: 'Project Two',
+        members: 1,
+        url: 'https://www.sanity.io/manage/project/project2',
+        created: '2023-01-02',
+      },
+    ])
+  })
+
   test('displays an error if the API request fails', async () => {
     mockApi({
       apiVersion: PROJECTS_API_VERSION,
