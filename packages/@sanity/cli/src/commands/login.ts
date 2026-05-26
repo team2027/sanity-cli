@@ -2,25 +2,19 @@ import {text} from 'node:stream/consumers'
 
 import {Command, Flags} from '@oclif/core'
 import {type FlagInput} from '@oclif/core/interfaces'
-import {SanityCommand} from '@sanity/cli-core'
+import {isInteractive, SanityCommand} from '@sanity/cli-core'
 
 import {login} from '../actions/auth/login/login.js'
 
 export class LoginCommand extends SanityCommand<typeof LoginCommand> {
   static override description = `Log in to your Sanity account
 
-Opens a browser for authentication. Use --background for automated
-workflows — it opens the browser, waits up to 120s for login to
-complete, and exits. If a browser session is already authenticated,
-this completes in seconds.`
+Opens a browser for authentication. If a browser session is already
+authenticated, this completes in seconds.`
   static override examples: Array<Command.Example> = [
     {
-      command: '<%= config.bin %> <%= command.id %> --background',
-      description: 'Automated: open browser, wait for login, exit (recommended for scripts/agents)',
-    },
-    {
       command: '<%= config.bin %> <%= command.id %>',
-      description: 'Interactive: log in via browser',
+      description: 'Log in via browser (opens automatically)',
     },
     {
       command: '<%= config.bin %> <%= command.id %> --provider github',
@@ -54,6 +48,7 @@ this completes in seconds.`
       description:
         'Open browser, auto-pick provider, wait up to 120s for login (recommended for automated use)',
       exclusive: ['with-token', 'sso'],
+      hidden: true,
     }),
     experimental: Flags.boolean({
       default: false,
@@ -103,7 +98,11 @@ this completes in seconds.`
         token,
       })
 
-      this.log('Login successful')
+      if (!isInteractive()) {
+        // Non-interactive mode spawns a background child — don't claim success yet
+      } else {
+        this.log('Login successful')
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
       this.error(`Login failed: ${message}`, {exit: 1})

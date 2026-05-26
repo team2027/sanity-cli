@@ -2,6 +2,7 @@ import {
   type CLITelemetryStore,
   getCliToken,
   getUserConfig,
+  isInteractive,
   type Output,
   setCliUserConfig,
   subdebug,
@@ -14,6 +15,7 @@ import {logout} from '../../../services/auth.js'
 import {LoginTrace} from '../../../telemetry/login.telemetry.js'
 import {canLaunchBrowser} from '../../../util/canLaunchBrowser.js'
 import {startServerForTokenCallback} from '../authServer.js'
+import {spawnBackgroundLoginChild} from '../backgroundLogin.js'
 import {getProvider} from './getProvider.js'
 import {isSanityApiToken, validateToken} from './validateToken.js'
 
@@ -76,13 +78,31 @@ export async function login(options: LoginOptions) {
     throw new Error('No authentication providers found')
   }
 
+  // In non-interactive mode (CI, containers, AI agents), self-background the
+  // callback server so the CLI returns immediately. The browser-agent or user
+  // completes OAuth in the background; the token is written to config when the
+  // callback fires. The caller can retry `sanity init` until auth succeeds.
+  if (!isInteractive()) {
+    const {startBackgroundLogin} = await import('../backgroundLogin.js')
+
+    // Child picks its own port, constructs login URL, opens browser
+    const {pid, port, loginUrl} = await startBackgroundLogin(provider.url)
+
+    output.log(`\nOpening browser at ${loginUrl}\n`)
+    output.log(`Authentication is running in the background (PID ${pid}, port ${port}).`)
+    output.log(`The token will be saved automatically when login completes.`)
+    output.log(`Run \`sanity projects list\` to verify when ready.\n`)
+
+    trace.complete()
+    return
+  }
+
   const {loginUrl, server, token: tokenPromise} = await startServerForTokenCallback(provider.url)
 
   trace.log({step: 'waitForToken'})
 
   // Open a browser on the login page (or tell the user to)
   const shouldLaunchBrowser = (options.forceBrowser || canLaunchBrowser()) && options.open !== false
-  let browserOpened = false
 
   if (shouldLaunchBrowser) {
     open(loginUrl.href)
