@@ -109,7 +109,7 @@ describe('#init: oclif command setup', () => {
     })
 
     expect(error?.message).toContain('--project-name')
-    expect(error?.message).toContain('hint:')
+    expect(error?.message).toContain('[Hint]')
     expect(error?.oclif?.exit).toBe(2)
   })
 
@@ -122,7 +122,7 @@ describe('#init: oclif command setup', () => {
     })
 
     expect(error?.message).toContain('--bare cannot be used with --output-path')
-    expect(error?.message).toContain('hint:')
+    expect(error?.message).toContain('[Hint]')
     expect(error?.message).toContain('sanity init --bare --project-name')
     expect(error?.oclif?.exit).toBe(1)
   })

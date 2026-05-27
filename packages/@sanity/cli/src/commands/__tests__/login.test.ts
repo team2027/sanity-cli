@@ -1266,7 +1266,8 @@ describe('#login', {timeout: 10_000}, () => {
 
       expect(error).toBeInstanceOf(Error)
       expect(error?.message).toContain('Multiple login providers available: google, github')
-      expect(error?.message).toContain('hint: sanity login --provider google')
+      expect(error?.message).toContain('[Hint]')
+      expect(error?.message).toContain('sanity login --provider google')
     })
 
     test('throws error listing SSO providers when multiple SSO providers in non-interactive mode', async () => {

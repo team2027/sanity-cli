@@ -7,6 +7,7 @@ import {listOrganizations} from '../../../services/organizations.js'
 import {createProject} from '../../../services/projects.js'
 import {getOrganizationsWithAttachGrantInfo} from '../../organizations/getOrganizationsWithAttachGrantInfo.js'
 import {InitError} from '../initError.js'
+import {formatHint} from '../../../util/formatHint.js'
 import {promptUserForOrganization} from './promptUserForOrganization.js'
 
 const debug = subdebug('init')
@@ -50,8 +51,10 @@ export async function createProjectFromName({
       if (withAttach.length > 1) {
         const orgList = withAttach.map(({organization: o}) => `  ${o.id} (${o.name})`).join('\n')
         throw new InitError(
-          `Multiple organizations available:\n${orgList}\n` +
-            `hint: sanity init --organization ${withAttach[0].organization.id} --project-name "my-project" -y`,
+          `Multiple organizations available:\n${orgList}` +
+            formatHint(
+              `sanity init --organization ${withAttach[0].organization.id} --project-name "my-project" -y`,
+            ),
           1,
         )
       }

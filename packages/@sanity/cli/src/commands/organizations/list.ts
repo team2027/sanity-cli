@@ -6,6 +6,7 @@ import {isHttpError} from '@sanity/client'
 import sortBy from 'lodash-es/sortBy.js'
 
 import {listOrganizations} from '../../services/organizations.js'
+import {formatHint} from '../../util/formatHint.js'
 
 const sortFields = ['id', 'name', 'slug']
 
@@ -57,7 +58,7 @@ export class List extends SanityCommand<typeof List> {
       organizationsDebug('Error listing organizations', error)
       if (isHttpError(error) && (error.statusCode === 401 || error.statusCode === 403)) {
         this.error(
-          'Not logged in. Run `sanity login` or set the SANITY_AUTH_TOKEN environment variable.\nhint: sanity login --provider google',
+          `Not logged in. Run \`sanity login\` or set the SANITY_AUTH_TOKEN environment variable.${formatHint('sanity login --provider google')}`,
           {exit: 1},
         )
       }

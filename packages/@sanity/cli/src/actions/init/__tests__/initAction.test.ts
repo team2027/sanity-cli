@@ -345,7 +345,8 @@ describe('initAction (direct)', () => {
     expect(initError.message).toContain('Multiple organizations available')
     expect(initError.message).toContain('org-a (Alpha Org)')
     expect(initError.message).toContain('org-b (Beta Org)')
-    expect(initError.message).toContain('hint: sanity init --organization org-a')
+    expect(initError.message).toContain('[Hint]')
+    expect(initError.message).toContain('sanity init --organization org-a')
     expect(initError.exitCode).toBe(1)
   })
 

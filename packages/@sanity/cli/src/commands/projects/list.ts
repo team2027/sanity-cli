@@ -7,6 +7,7 @@ import size from 'lodash-es/size.js'
 import sortBy from 'lodash-es/sortBy.js'
 
 import {listProjects} from '../../services/projects.js'
+import {formatHint} from '../../util/formatHint.js'
 
 const sortFields = ['id', 'members', 'name', 'url', 'created']
 
@@ -100,7 +101,7 @@ export class List extends SanityCommand<typeof List> {
       projectsDebug('Error listing projects', error)
       if (isHttpError(error) && (error.statusCode === 401 || error.statusCode === 403)) {
         this.error(
-          'Not logged in. Run `sanity login` or set the SANITY_AUTH_TOKEN environment variable.\nhint: sanity login --provider google',
+          `Not logged in. Run \`sanity login\` or set the SANITY_AUTH_TOKEN environment variable.${formatHint('sanity login --provider google')}`,
           {exit: 1},
         )
       }

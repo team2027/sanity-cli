@@ -12,6 +12,7 @@ import {promptForConfigFiles} from '../../prompts/init/nextjs.js'
 import {getCliUser} from '../../services/user.js'
 import {CLIInitStepCompleted, type InitStepResult} from '../../telemetry/init.telemetry.js'
 import {detectFrameworkRecord} from '../../util/detectFramework.js'
+import {formatHint} from '../../util/formatHint.js'
 import {getProjectDefaults} from '../../util/getProjectDefaults.js'
 import {validateSession} from '../auth/ensureAuthenticated.js'
 import {getProviderName} from '../auth/getProviderName.js'
@@ -96,9 +97,11 @@ export async function initAction(options: InitOptions, context: InitContext): Pr
 
   if (options.bare && options.outputPath) {
     throw new InitError(
-      '--bare cannot be used with --output-path. Use --bare to create the project only, then scaffold the studio separately.\n' +
-        'hint: sanity init --bare --project-name "my-project" --dataset production -y\n' +
-        '      sanity init --project <id> --output-path ./studio -y',
+      '--bare cannot be used with --output-path. Use --bare to create the project only, then scaffold the studio separately.' +
+        formatHint(
+          'sanity init --bare --project-name "my-project" --dataset production -y',
+          'sanity init --project <id> --output-path ./studio -y',
+        ),
       1,
     )
   }
@@ -317,8 +320,10 @@ function checkFlagsInUnattendedMode(
     if (!hasProjectFlag && !options.organization) {
       throw new InitError(
         'The --organization flag is required for app templates in unattended mode. ' +
-          'Use --organization <id>, or pass --project <id> / --project-name <name>.\n' +
-          'hint: sanity init --organization <org-id> --template <template> --output-path ./app -y',
+          'Use --organization <id>, or pass --project <id> / --project-name <name>.' +
+          formatHint(
+            'sanity init --organization <org-id> --template <template> --output-path ./app -y',
+          ),
         1,
       )
     }
@@ -328,16 +333,16 @@ function checkFlagsInUnattendedMode(
 
   if (!isNextJs && !options.bare && !options.outputPath) {
     throw new InitError(
-      '`--output-path` must be specified in unattended mode\n' +
-        'hint: sanity init --output-path ./studio --project <id> --dataset production -y',
+      '`--output-path` must be specified in unattended mode' +
+        formatHint('sanity init --output-path ./studio --project <id> --dataset production -y'),
       1,
     )
   }
 
   if (!options.project && !effectiveProjectName) {
     throw new InitError(
-      '`--project <id>` or `--project-name <name>` must be specified in unattended mode\n' +
-        'hint: sanity init --project-name "my-project" --dataset production -y',
+      '`--project <id>` or `--project-name <name>` must be specified in unattended mode' +
+        formatHint('sanity init --project-name "my-project" --dataset production -y'),
       1,
     )
   }

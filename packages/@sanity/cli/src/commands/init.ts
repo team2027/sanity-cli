@@ -3,6 +3,7 @@ import {CLIError} from '@oclif/core/errors'
 import {SanityCommand} from '@sanity/cli-core'
 
 import {initAction} from '../actions/init/initAction.js'
+import {formatHint} from '../util/formatHint.js'
 import {InitError} from '../actions/init/initError.js'
 import {flagsToInitOptions} from '../actions/init/types.js'
 import {getSanityEnv} from '../util/getSanityEnv.js'
@@ -211,7 +212,7 @@ export class InitCommand extends SanityCommand<typeof InitCommand> {
   protected override async catch(err: Error & {exitCode?: number}): Promise<never> {
     if (err.message?.includes('Flag --create-project expects a value')) {
       this.error(
-        'Flag --create-project expects a value. Use --project-name instead:\nhint: sanity init --project-name "my-project" --dataset production -y',
+        `Flag --create-project expects a value. Use --project-name instead:${formatHint('sanity init --project-name "my-project" --dataset production -y')}`,
         {exit: 2},
       )
     }
