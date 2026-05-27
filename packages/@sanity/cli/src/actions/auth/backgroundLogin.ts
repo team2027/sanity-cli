@@ -1,50 +1,44 @@
 import {spawn} from 'node:child_process'
+import {mkdirSync, readFileSync, writeFileSync} from 'node:fs'
+import {homedir} from 'node:os'
+import {dirname, join} from 'node:path'
 
 import {subdebug} from '@sanity/cli-core'
 
 const debug = subdebug('login:background')
 
-/**
- * Spawn a detached child process that:
- * 1. Binds a callback server (tries ports 4321, 4000, 3003, 1234, 8080, 13333)
- * 2. Constructs the login URL with the bound port
- * 3. Opens the browser via the `open` npm package or system xdg-open
- * 4. Waits for the OAuth callback
- * 5. Writes the token to ~/.config/sanity/config.json
- * 6. Exits
- *
- * The parent process can exit immediately after calling this.
- *
- * @param providerUrl - The OAuth provider URL from the Sanity API
- * @returns The PID of the child process
- */
-export function spawnBackgroundLoginChild(providerUrl: string): number {
-  const script = buildChildScript(providerUrl)
-
-  const child = spawn(process.execPath, ['--input-type=module', '-e', script], {
-    detached: true,
-    stdio: ['ignore', 'pipe', 'ignore'],
-    env: {...process.env},
-  })
-
-  child.unref()
-
-  const pid = child.pid
-  if (!pid) {
-    throw new Error('Failed to spawn background login process')
+function getConfigDir(): string {
+  if (process.env.SANITY_CLI_CONFIG_PATH) {
+    return dirname(process.env.SANITY_CLI_CONFIG_PATH)
   }
-
-  debug('Spawned background login child (PID %d)', pid)
-  return pid
+  const suffix = process.env.SANITY_INTERNAL_ENV === 'staging' ? '-staging' : ''
+  return join(homedir(), '.config', `sanity${suffix}`)
 }
 
-/**
- * Read the port the child bound to from its stdout.
- * The child prints the port as the first line.
- */
-export function readChildPort(
-  child: ReturnType<typeof spawn>,
-): Promise<{port: number; loginUrl: string}> {
+function readPidFile(): {pid: number; port: number; loginUrl: string} | null {
+  try {
+    return JSON.parse(readFileSync(join(getConfigDir(), '.bg-login.json'), 'utf8'))
+  } catch {
+    return null
+  }
+}
+
+function writePidFile(info: {pid: number; port: number; loginUrl: string}): void {
+  const dir = getConfigDir()
+  mkdirSync(dir, {recursive: true})
+  writeFileSync(join(dir, '.bg-login.json'), JSON.stringify(info))
+}
+
+function isProcessAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0)
+    return true
+  } catch {
+    return false
+  }
+}
+
+function readChildPort(child: ReturnType<typeof spawn>): Promise<{port: number; loginUrl: string}> {
   return new Promise((resolve, reject) => {
     let buf = ''
     const timeout = setTimeout(() => reject(new Error('Child did not report port in time')), 5000)
@@ -78,12 +72,24 @@ export function readChildPort(
 }
 
 /**
- * Spawn the background login child and wait for it to report its port.
+ * Spawn a detached child that handles the OAuth callback flow.
+ * Returns immediately with the child's PID, port, and login URL.
+ *
+ * If a background login child is already running, returns its info
+ * instead of spawning a new one (pidfile guard).
  */
 export async function startBackgroundLogin(
   providerUrl: string,
+  options: {open?: boolean} = {},
 ): Promise<{pid: number; port: number; loginUrl: string}> {
-  const script = buildChildScript(providerUrl)
+  const existing = readPidFile()
+  if (existing && isProcessAlive(existing.pid)) {
+    debug('Background login already running (PID %d, port %d)', existing.pid, existing.port)
+    return existing
+  }
+
+  const shouldOpen = options.open !== false
+  const script = buildChildScript(providerUrl, shouldOpen)
 
   const child = spawn(process.execPath, ['--input-type=module', '-e', script], {
     detached: true,
@@ -93,7 +99,6 @@ export async function startBackgroundLogin(
 
   const {port, loginUrl} = await readChildPort(child)
 
-  // Now that we have the port, detach fully
   child.stdout?.destroy()
   child.unref()
 
@@ -102,11 +107,13 @@ export async function startBackgroundLogin(
     throw new Error('Failed to spawn background login process')
   }
 
+  writePidFile({pid, port, loginUrl})
+
   debug('Background login child (PID %d) listening on port %d', pid, port)
   return {pid, port, loginUrl}
 }
 
-function buildChildScript(providerUrl: string): string {
+function buildChildScript(providerUrl: string, shouldOpen: boolean): string {
   return `
 import { createServer } from 'node:http';
 import { get } from 'node:https';
@@ -116,6 +123,7 @@ import { join, dirname } from 'node:path';
 import { execSync } from 'node:child_process';
 
 const PROVIDER_URL = ${JSON.stringify(providerUrl)};
+const SHOULD_OPEN = ${JSON.stringify(shouldOpen)};
 const PORTS = [4321, 4000, 3003, 1234, 8080, 13333];
 const TIMEOUT_MS = 300_000; // 5 minutes
 
@@ -204,9 +212,10 @@ server.on('listening', () => {
   // Report port and URL to parent via stdout (JSON line)
   process.stdout.write(JSON.stringify({ port, loginUrl }) + '\\n');
 
-  // Open browser
-  try { execSync('open ' + JSON.stringify(loginUrl) + ' 2>/dev/null || xdg-open ' + JSON.stringify(loginUrl) + ' 2>/dev/null || true'); }
-  catch {}
+  if (SHOULD_OPEN) {
+    try { execSync('open ' + JSON.stringify(loginUrl) + ' 2>/dev/null || xdg-open ' + JSON.stringify(loginUrl) + ' 2>/dev/null || true'); }
+    catch {}
+  }
 });
 
 server.listen(PORTS[portIndex]);

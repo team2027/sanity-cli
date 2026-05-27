@@ -43,13 +43,6 @@ authenticated, this completes in seconds.`
     },
   ]
   static override flags = {
-    background: Flags.boolean({
-      default: false,
-      description:
-        'Open browser, auto-pick provider, wait up to 120s for login (recommended for automated use)',
-      exclusive: ['with-token', 'sso'],
-      hidden: true,
-    }),
     experimental: Flags.boolean({
       default: false,
       hidden: true,
@@ -83,23 +76,21 @@ authenticated, this completes in seconds.`
 
   public async run(): Promise<void> {
     const {flags} = await this.parse(LoginCommand)
-    const {background, 'sso-provider': ssoProvider, 'with-token': withToken, ...loginFlags} = flags
+    const {'sso-provider': ssoProvider, 'with-token': withToken, ...loginFlags} = flags
 
     try {
       const token = withToken ? await readTokenFromStdin() : undefined
 
       await login({
         ...loginFlags,
-        forceBrowser: background,
-        open: background ? true : loginFlags.open,
         output: this.output,
         ssoProvider,
         telemetry: this.telemetry,
         token,
       })
 
-      if (!isInteractive()) {
-        // Non-interactive mode spawns a background child — don't claim success yet
+      if (!isInteractive() && !token) {
+        // Non-interactive OAuth spawns a background child — don't claim success yet
       } else {
         this.log('Login successful')
       }

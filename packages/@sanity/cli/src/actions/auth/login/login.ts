@@ -15,7 +15,6 @@ import {logout} from '../../../services/auth.js'
 import {LoginTrace} from '../../../telemetry/login.telemetry.js'
 import {canLaunchBrowser} from '../../../util/canLaunchBrowser.js'
 import {startServerForTokenCallback} from '../authServer.js'
-import {spawnBackgroundLoginChild} from '../backgroundLogin.js'
 import {getProvider} from './getProvider.js'
 import {isSanityApiToken, validateToken} from './validateToken.js'
 
@@ -27,7 +26,6 @@ interface LoginOptions {
   telemetry: CLITelemetryStore
 
   experimental?: boolean
-  forceBrowser?: boolean
   open?: boolean
   provider?: string
   sso?: string
@@ -83,14 +81,24 @@ export async function login(options: LoginOptions) {
   // completes OAuth in the background; the token is written to config when the
   // callback fires. The caller can retry `sanity init` until auth succeeds.
   if (!isInteractive()) {
+    // Pre-populate telemetryDisclosed so the next CLI command's prerun hook
+    // doesn't do a read-modify-write that clobbers the token the child writes.
+    const userConfig = getUserConfig()
+    if (!userConfig.get('telemetryDisclosed')) {
+      userConfig.set('telemetryDisclosed', Date.now())
+    }
+
     const {startBackgroundLogin} = await import('../backgroundLogin.js')
+    const shouldOpen = options.open !== false
+    const {pid, port, loginUrl} = await startBackgroundLogin(provider.url, {open: shouldOpen})
 
-    // Child picks its own port, constructs login URL, opens browser
-    const {pid, port, loginUrl} = await startBackgroundLogin(provider.url)
-
-    output.log(`\nOpening browser at ${loginUrl}\n`)
+    if (shouldOpen) {
+      output.log(`\nOpening browser at ${loginUrl}\n`)
+    } else {
+      output.log(`\nPlease open a browser at ${loginUrl}\n`)
+    }
     output.log(`Authentication is running in the background (PID ${pid}, port ${port}).`)
-    output.log(`The token will be saved automatically when login completes.`)
+    output.log(`The token will be saved automatically when login completes (~30-60 seconds).`)
     output.log(`Run \`sanity projects list\` to verify when ready.\n`)
 
     trace.complete()
@@ -102,7 +110,7 @@ export async function login(options: LoginOptions) {
   trace.log({step: 'waitForToken'})
 
   // Open a browser on the login page (or tell the user to)
-  const shouldLaunchBrowser = (options.forceBrowser || canLaunchBrowser()) && options.open !== false
+  const shouldLaunchBrowser = canLaunchBrowser() && options.open !== false
 
   if (shouldLaunchBrowser) {
     open(loginUrl.href)

@@ -31,6 +31,18 @@ vi.mock('@sanity/cli-core/ux', async () => {
 // Mock browser launching
 vi.mock('open')
 
+// Mock background login (spawned in non-interactive mode)
+const mockedStartBackgroundLogin = vi.hoisted(() =>
+  vi.fn().mockResolvedValue({
+    loginUrl: 'https://api.sanity.io/auth/google?type=token&origin=http://localhost:4321/callback',
+    pid: 99999,
+    port: 4321,
+  }),
+)
+vi.mock('../../actions/auth/backgroundLogin.js', () => ({
+  startBackgroundLogin: mockedStartBackgroundLogin,
+}))
+
 // Mock platform detection
 vi.mock('../../util/canLaunchBrowser.js', () => ({
   canLaunchBrowser: vi.fn().mockReturnValue(true),
@@ -1300,14 +1312,24 @@ describe('#login', {timeout: 10_000}, () => {
     test('succeeds non-interactively with a single OAuth provider', async () => {
       mockedGetCliToken.mockResolvedValue('')
       mockedIsInteractive.mockReturnValue(false)
-      mockSingleProviderLogin()
 
-      const commandPromise = testCommand(LoginCommand, [])
-      await simulateOAuthCallback(4321, 'test-session-id')
-      const {error, stdout} = await commandPromise
+      mockApi({
+        apiVersion: AUTH_API_VERSION,
+        method: 'get',
+        uri: '/auth/providers',
+      }).reply(200, {
+        providers: [{name: 'google', title: 'Google', url: 'https://api.sanity.io/auth/google'}],
+      })
+
+      const {error, stdout} = await testCommand(LoginCommand, [])
 
       if (error) throw error
-      expect(stdout).toContain('Login successful')
+      expect(stdout).toContain('Opening browser at')
+      expect(stdout).toContain('Authentication is running in the background')
+      expect(stdout).toContain('~30-60 seconds')
+      expect(mockedStartBackgroundLogin).toHaveBeenCalledWith('https://api.sanity.io/auth/google', {
+        open: true,
+      })
     })
   })
 
