@@ -371,10 +371,39 @@ async function ensureAuthenticated(
   }
 
   if (options.unattended) {
-    throw new InitError(
-      'Must be logged in to run this command in unattended mode, run `sanity login` or set the SANITY_AUTH_TOKEN environment variable',
-      1,
+    output.log('Not logged in — starting background authentication...')
+    try {
+      await login({
+        output,
+        telemetry: trace.newContext('login'),
+      })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      throw new InitError(`Login failed: ${message}`, 1)
+    }
+
+    // Background login returns immediately; poll for the token
+    const maxWait = 120_000
+    const interval = 3_000
+    const deadline = Date.now() + maxWait
+    let loggedInUser: SanityOrgUser | null = null
+    while (Date.now() < deadline) {
+      loggedInUser = await validateSession()
+      if (loggedInUser) break
+      await new Promise((r) => setTimeout(r, interval))
+    }
+
+    if (!loggedInUser) {
+      throw new InitError(
+        'Authentication timed out. Complete the browser login and retry, or set the SANITY_AUTH_TOKEN environment variable.',
+        1,
+      )
+    }
+
+    output.log(
+      `${logSymbols.success} You are logged in as ${loggedInUser.email} using ${getProviderName(loggedInUser.provider)}`,
     )
+    return {user: loggedInUser}
   }
 
   trace.log({step: 'login'})

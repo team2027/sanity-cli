@@ -5,6 +5,8 @@ import {SanityCommand, subdebug} from '@sanity/cli-core'
 import size from 'lodash-es/size.js'
 import sortBy from 'lodash-es/sortBy.js'
 
+import {isHttpError} from '@sanity/client'
+
 import {listProjects} from '../../services/projects.js'
 
 const sortFields = ['id', 'members', 'name', 'url', 'created']
@@ -97,6 +99,12 @@ export class List extends SanityCommand<typeof List> {
       for (const row of rows) this.log(printRow(row))
     } catch (error) {
       projectsDebug('Error listing projects', error)
+      if (isHttpError(error) && (error.statusCode === 401 || error.statusCode === 403)) {
+        this.error(
+          'Not logged in. Run `sanity login` or set the SANITY_AUTH_TOKEN environment variable.',
+          {exit: 1},
+        )
+      }
       this.error('Failed to list projects', {exit: 1})
     }
   }

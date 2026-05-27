@@ -98,7 +98,9 @@ export async function login(options: LoginOptions) {
       output.log(`\nPlease open a browser at ${loginUrl}\n`)
     }
     output.log(`Authentication is running in the background (PID ${pid}, port ${port}).`)
-    output.log(`The token will be saved automatically when login completes (~30-60 seconds).`)
+    output.log(
+      `The token will be saved to ~/.config/sanity/config.json when login completes (~30-60 seconds).`,
+    )
     output.log(`Run \`sanity projects list\` to verify when ready.\n`)
 
     trace.complete()

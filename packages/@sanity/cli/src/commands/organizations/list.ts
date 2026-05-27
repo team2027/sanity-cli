@@ -2,6 +2,7 @@ import {styleText} from 'node:util'
 
 import {Flags} from '@oclif/core'
 import {SanityCommand, subdebug} from '@sanity/cli-core'
+import {isHttpError} from '@sanity/client'
 import size from 'lodash-es/size.js'
 import sortBy from 'lodash-es/sortBy.js'
 
@@ -55,6 +56,12 @@ export class List extends SanityCommand<typeof List> {
       organizations = await listOrganizations()
     } catch (error) {
       organizationsDebug('Error listing organizations', error)
+      if (isHttpError(error) && (error.statusCode === 401 || error.statusCode === 403)) {
+        this.error(
+          'Not logged in. Run `sanity login` or set the SANITY_AUTH_TOKEN environment variable.',
+          {exit: 1},
+        )
+      }
       this.error('Failed to list organizations', {exit: 1})
     }
 

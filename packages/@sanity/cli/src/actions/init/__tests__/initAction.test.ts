@@ -185,8 +185,9 @@ describe('initAction (direct)', () => {
     expect(combined).toContain('production')
   })
 
-  test('throws InitError when not authenticated in unattended mode', async () => {
+  test('auto-triggers login when not authenticated in unattended mode', async () => {
     mockValidateSession.mockResolvedValue(null)
+    mockLogin.mockRejectedValue(new Error('No providers available'))
 
     const context = createTestContext()
     const options: InitOptions = {
@@ -204,11 +205,10 @@ describe('initAction (direct)', () => {
       caughtError = error
     }
 
+    expect(mockLogin).toHaveBeenCalled()
     expect(caughtError).toBeInstanceOf(InitError)
     const initError = caughtError as InitError
-    expect(initError.message).toBe(
-      'Must be logged in to run this command in unattended mode, run `sanity login` or set the SANITY_AUTH_TOKEN environment variable',
-    )
+    expect(initError.message).toContain('Login failed')
     expect(initError.exitCode).toBe(1)
   })
 
