@@ -399,7 +399,7 @@ async function ensureAuthenticated(
 
     // Background login returns immediately; poll for the token
     const maxWait = 120_000
-    const interval = 3_000
+    const interval = 3000
     const deadline = Date.now() + maxWait
     let loggedInUser: SanityOrgUser | null = null
     while (Date.now() < deadline) {

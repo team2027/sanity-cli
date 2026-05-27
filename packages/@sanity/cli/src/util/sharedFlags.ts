@@ -46,6 +46,18 @@ export function getProjectIdFlag(options: SharedFlagOptions) {
   const description = (baseDescription ?? 'Project ID to use') + (isOverride ? OVERRIDE_SUFFIX : '')
 
   return {
+    // Hidden alias so that `--project <id>` works as a synonym for `--project-id <id>`
+    project: Flags.string({
+      exclusive: ['project-id'],
+      hidden: true,
+      parse: async (input: string) => {
+        const trimmed = input.trim()
+        if (trimmed === '') {
+          throw new Error('`--project` cannot be empty if provided')
+        }
+        return trimmed
+      },
+    }),
     'project-id': Flags.string({
       description,
       helpGroup: helpGroup ?? (isOverride ? 'OVERRIDE' : undefined),
@@ -56,18 +68,6 @@ export function getProjectIdFlag(options: SharedFlagOptions) {
         const trimmed = input.trim()
         if (trimmed === '') {
           throw new Error('`--project-id` cannot be empty if provided')
-        }
-        return trimmed
-      },
-    }),
-    // Hidden alias so that `--project <id>` works as a synonym for `--project-id <id>`
-    project: Flags.string({
-      exclusive: ['project-id'],
-      hidden: true,
-      parse: async (input: string) => {
-        const trimmed = input.trim()
-        if (trimmed === '') {
-          throw new Error('`--project` cannot be empty if provided')
         }
         return trimmed
       },

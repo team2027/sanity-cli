@@ -3,7 +3,6 @@ import {styleText} from 'node:util'
 import {Flags} from '@oclif/core'
 import {SanityCommand, subdebug} from '@sanity/cli-core'
 import {isHttpError} from '@sanity/client'
-import size from 'lodash-es/size.js'
 import sortBy from 'lodash-es/sortBy.js'
 
 import {listOrganizations} from '../../services/organizations.js'
@@ -77,11 +76,11 @@ export class List extends SanityCommand<typeof List> {
 
     const rows = order === 'asc' ? ordered : ordered.toReversed()
 
-    const maxWidths = sortFields.map((str) => size(str))
+    const maxWidths = sortFields.map((str) => str.length)
 
     for (const row of rows) {
       for (const [i, element] of row.entries()) {
-        maxWidths[i] = Math.max(size(element), maxWidths[i])
+        maxWidths[i] = Math.max(element.length, maxWidths[i])
       }
     }
 

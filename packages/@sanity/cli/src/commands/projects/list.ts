@@ -2,10 +2,9 @@ import {styleText} from 'node:util'
 
 import {Flags} from '@oclif/core'
 import {SanityCommand, subdebug} from '@sanity/cli-core'
+import {isHttpError} from '@sanity/client'
 import size from 'lodash-es/size.js'
 import sortBy from 'lodash-es/sortBy.js'
-
-import {isHttpError} from '@sanity/client'
 
 import {listProjects} from '../../services/projects.js'
 
@@ -59,11 +58,11 @@ export class List extends SanityCommand<typeof List> {
         this.log(
           JSON.stringify(
             projects.map(({createdAt, displayName, id, members = []}) => ({
-              id,
-              name: displayName,
-              members: members.length,
-              url: `https://www.sanity.io/manage/project/${id}`,
               created: createdAt,
+              id,
+              members: members.length,
+              name: displayName,
+              url: `https://www.sanity.io/manage/project/${id}`,
             })),
             null,
             2,

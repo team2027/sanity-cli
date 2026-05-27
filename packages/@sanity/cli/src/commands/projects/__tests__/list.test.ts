@@ -151,18 +151,18 @@ describe('#list', () => {
     const parsed = JSON.parse(stdout)
     expect(parsed).toEqual([
       {
-        id: 'project1',
-        name: 'Project One',
-        members: 2,
-        url: 'https://www.sanity.io/manage/project/project1',
         created: '2023-01-01',
+        id: 'project1',
+        members: 2,
+        name: 'Project One',
+        url: 'https://www.sanity.io/manage/project/project1',
       },
       {
-        id: 'project2',
-        name: 'Project Two',
-        members: 1,
-        url: 'https://www.sanity.io/manage/project/project2',
         created: '2023-01-02',
+        id: 'project2',
+        members: 1,
+        name: 'Project Two',
+        url: 'https://www.sanity.io/manage/project/project2',
       },
     ])
   })

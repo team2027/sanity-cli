@@ -15,6 +15,7 @@ import {logout} from '../../../services/auth.js'
 import {LoginTrace} from '../../../telemetry/login.telemetry.js'
 import {canLaunchBrowser} from '../../../util/canLaunchBrowser.js'
 import {startServerForTokenCallback} from '../authServer.js'
+import {startBackgroundLogin} from '../backgroundLogin.js'
 import {getProvider} from './getProvider.js'
 import {isSanityApiToken, validateToken} from './validateToken.js'
 
@@ -88,9 +89,8 @@ export async function login(options: LoginOptions) {
       userConfig.set('telemetryDisclosed', Date.now())
     }
 
-    const {startBackgroundLogin} = await import('../backgroundLogin.js')
     const shouldOpen = options.open !== false
-    const {pid, port, loginUrl} = await startBackgroundLogin(provider.url, {open: shouldOpen})
+    const {loginUrl, pid, port} = await startBackgroundLogin(provider.url, {open: shouldOpen})
 
     if (shouldOpen) {
       output.log(`\nOpening browser at ${loginUrl}\n`)

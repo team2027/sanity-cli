@@ -35,7 +35,7 @@ vi.mock('open')
 const mockedStartBackgroundLogin = vi.hoisted(() =>
   vi.fn().mockResolvedValue({
     loginUrl: 'https://api.sanity.io/auth/google?type=token&origin=http://localhost:4321/callback',
-    pid: 99999,
+    pid: 99_999,
     port: 4321,
   }),
 )

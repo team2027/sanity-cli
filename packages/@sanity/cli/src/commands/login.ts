@@ -89,9 +89,7 @@ authenticated, this completes in seconds.`
         token,
       })
 
-      if (!isInteractive() && !token) {
-        // Non-interactive OAuth spawns a background child — don't claim success yet
-      } else {
+      if (isInteractive() || token) {
         this.log('Login successful')
       }
     } catch (error) {

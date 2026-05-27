@@ -46,6 +46,8 @@ export class Status extends SanityCommand<typeof Status> {
 
     if (json) {
       this.log(JSON.stringify({loggedIn: false}, null, 2))
+      this.exit(1)
+      return
     }
 
     this.error(

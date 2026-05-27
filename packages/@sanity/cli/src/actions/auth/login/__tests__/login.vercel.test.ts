@@ -17,6 +17,7 @@ vi.mock('@sanity/cli-core', async (importOriginal) => {
       get: vi.fn(),
       set: vi.fn(),
     }),
+    isInteractive: vi.fn().mockReturnValue(true),
     setCliUserConfig: vi.fn(),
     subdebug: vi.fn(() => vi.fn()),
   }
@@ -43,6 +44,9 @@ vi.mock('../validateToken.js', () => ({
 }))
 vi.mock('../../../../util/canLaunchBrowser.js', () => ({
   canLaunchBrowser: vi.fn(() => true),
+}))
+vi.mock('../../backgroundLogin.js', () => ({
+  startBackgroundLogin: vi.fn(),
 }))
 
 const mockedGetCliToken = vi.mocked(getCliToken)
