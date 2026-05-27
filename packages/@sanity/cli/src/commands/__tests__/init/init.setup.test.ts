@@ -100,6 +100,19 @@ describe('#init: oclif command setup', () => {
     expect(error?.oclif?.exit).toBe(2)
   })
 
+  test('throws error with hint when --create-project is used without a value', async () => {
+    const {error} = await testCommand(InitCommand, ['--create-project'], {
+      mocks: {
+        isInteractive: true,
+        token: 'test-token',
+      },
+    })
+
+    expect(error?.message).toContain('--project-name')
+    expect(error?.message).toContain('hint:')
+    expect(error?.oclif?.exit).toBe(2)
+  })
+
   test('throws error with hint when --bare and --output-path are both passed', async () => {
     const {error} = await testCommand(InitCommand, ['--bare', '--output-path=/test-path'], {
       mocks: {

@@ -208,6 +208,16 @@ export class InitCommand extends SanityCommand<typeof InitCommand> {
     }),
   }
 
+  protected override async catch(err: Error & {exitCode?: number}): Promise<never> {
+    if (err.message?.includes('Flag --create-project expects a value')) {
+      this.error(
+        'Flag --create-project expects a value. Use --project-name instead:\nhint: sanity init --project-name "my-project" --dataset production -y',
+        {exit: 2},
+      )
+    }
+    throw err
+  }
+
   public async run(): Promise<void> {
     let mcpMode: 'auto' | 'prompt' | 'skip' = 'prompt'
     if (!this.flags.mcp || !this.resolveIsInteractive() || getSanityEnv() !== 'production') {
