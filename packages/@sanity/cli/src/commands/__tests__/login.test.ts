@@ -1246,7 +1246,7 @@ describe('#login', {timeout: 10_000}, () => {
   })
 
   describe('Non-Interactive Mode', () => {
-    test('auto-selects github provider when multiple OAuth providers in non-interactive mode', async () => {
+    test('auto-selects provider when multiple OAuth providers in non-interactive mode', async () => {
       mockedGetCliToken.mockResolvedValue('')
       mockedIsInteractive.mockReturnValue(false)
 
