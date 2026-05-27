@@ -14,6 +14,7 @@ export default {
   },
   plugins: ['@oclif/plugin-help', '@sanity/runtime-cli', '@sanity/migrate', '@sanity/codegen'],
   topics: {
+    auth: {description: 'Manage authentication'},
     backups: {description: 'Manage dataset backups'},
     cors: {description: 'Manage CORS origins for your project'},
     datasets: {description: 'Manage datasets in your project'},

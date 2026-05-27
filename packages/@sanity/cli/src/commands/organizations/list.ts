@@ -58,7 +58,7 @@ export class List extends SanityCommand<typeof List> {
       organizationsDebug('Error listing organizations', error)
       if (isHttpError(error) && (error.statusCode === 401 || error.statusCode === 403)) {
         this.error(
-          'Not logged in. Run `sanity login` or set the SANITY_AUTH_TOKEN environment variable.',
+          'Not logged in. Run `sanity login` or set the SANITY_AUTH_TOKEN environment variable.\nhint: sanity login --provider google',
           {exit: 1},
         )
       }

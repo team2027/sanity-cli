@@ -308,7 +308,8 @@ function checkFlagsInUnattendedMode(
     if (!hasProjectFlag && !options.organization) {
       throw new InitError(
         'The --organization flag is required for app templates in unattended mode. ' +
-          'Use --organization <id>, or pass --project <id> / --project-name <name>.',
+          'Use --organization <id>, or pass --project <id> / --project-name <name>.\n' +
+          'hint: sanity init --organization <org-id> --template <template> --output-path ./app -y',
         1,
       )
     }
@@ -317,12 +318,17 @@ function checkFlagsInUnattendedMode(
   }
 
   if (!isNextJs && !options.bare && !options.outputPath) {
-    throw new InitError('`--output-path` must be specified in unattended mode', 1)
+    throw new InitError(
+      '`--output-path` must be specified in unattended mode\n' +
+        'hint: sanity init --output-path ./studio --project <id> --dataset production -y',
+      1,
+    )
   }
 
   if (!options.project && !effectiveProjectName) {
     throw new InitError(
-      '`--project <id>` or `--project-name <name>` must be specified in unattended mode',
+      '`--project <id>` or `--project-name <name>` must be specified in unattended mode\n' +
+        'hint: sanity init --project-name "my-project" --dataset production -y',
       1,
     )
   }
