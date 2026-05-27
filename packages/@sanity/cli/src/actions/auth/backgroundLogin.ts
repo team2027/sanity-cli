@@ -15,7 +15,14 @@ function getConfigDir(): string {
   return join(homedir(), '.config', `sanity${suffix}`)
 }
 
-function readPidFile(): {pid: number; port: number; loginUrl: string} | null {
+interface PidFileInfo {
+  loginUrl: string
+  pid: number
+  port: number
+  providerUrl: string
+}
+
+function readPidFile(): PidFileInfo | null {
   try {
     return JSON.parse(readFileSync(join(getConfigDir(), '.bg-login.json'), 'utf8'))
   } catch {
@@ -23,7 +30,7 @@ function readPidFile(): {pid: number; port: number; loginUrl: string} | null {
   }
 }
 
-function writePidFile(info: {pid: number; port: number; loginUrl: string}): void {
+function writePidFile(info: PidFileInfo): void {
   const dir = getConfigDir()
   mkdirSync(dir, {recursive: true})
   writeFileSync(join(dir, '.bg-login.json'), JSON.stringify(info))
@@ -84,8 +91,14 @@ export async function startBackgroundLogin(
 ): Promise<{pid: number; port: number; loginUrl: string}> {
   const existing = readPidFile()
   if (existing && isProcessAlive(existing.pid)) {
-    debug('Background login already running (PID %d, port %d)', existing.pid, existing.port)
-    return existing
+    if (existing.providerUrl === providerUrl) {
+      debug('Background login already running (PID %d, port %d)', existing.pid, existing.port)
+      return {pid: existing.pid, port: existing.port, loginUrl: existing.loginUrl}
+    }
+    debug('Killing stale background login child (PID %d, different provider)', existing.pid)
+    try {
+      process.kill(existing.pid)
+    } catch {}
   }
 
   const shouldOpen = options.open !== false
@@ -107,7 +120,7 @@ export async function startBackgroundLogin(
     throw new Error('Failed to spawn background login process')
   }
 
-  writePidFile({pid, port, loginUrl})
+  writePidFile({pid, port, loginUrl, providerUrl})
 
   debug('Background login child (PID %d) listening on port %d', pid, port)
   return {pid, port, loginUrl}
@@ -120,7 +133,7 @@ import { get } from 'node:https';
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { homedir, hostname, platform } from 'node:os';
 import { join, dirname } from 'node:path';
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 
 const PROVIDER_URL = ${JSON.stringify(providerUrl)};
 const SHOULD_OPEN = ${JSON.stringify(shouldOpen)};
@@ -213,8 +226,11 @@ server.on('listening', () => {
   process.stdout.write(JSON.stringify({ port, loginUrl }) + '\\n');
 
   if (SHOULD_OPEN) {
-    try { execSync('open ' + JSON.stringify(loginUrl) + ' 2>/dev/null || xdg-open ' + JSON.stringify(loginUrl) + ' 2>/dev/null || true'); }
-    catch {}
+    const openers = platform() === 'darwin' ? ['open'] : ['xdg-open'];
+    for (const cmd of openers) {
+      try { execFileSync(cmd, [loginUrl], { stdio: 'ignore' }); break; }
+      catch {}
+    }
   }
 });
 

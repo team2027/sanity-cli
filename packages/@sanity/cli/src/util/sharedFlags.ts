@@ -62,6 +62,7 @@ export function getProjectIdFlag(options: SharedFlagOptions) {
     }),
     // Hidden alias so that `--project <id>` works as a synonym for `--project-id <id>`
     project: Flags.string({
+      exclusive: ['project-id'],
       hidden: true,
       parse: async (input: string) => {
         const trimmed = input.trim()

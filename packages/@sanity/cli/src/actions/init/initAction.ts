@@ -85,16 +85,17 @@ export async function initAction(options: InitOptions, context: InitContext): Pr
 
   const isAppTemplate = options.template ? determineAppTemplate(options.template) : false
 
-  if (options.unattended && !isAppTemplate && !options.project && !options.projectName) {
+  let effectiveProjectName = options.projectName
+  if (options.unattended && !isAppTemplate && !options.project && !effectiveProjectName) {
     const derived = await deriveProjectName(workDir)
     if (derived) {
       debug('Deriving --project-name from %s: %s', derived.source, derived.name)
-      options.projectName = derived.name
+      effectiveProjectName = derived.name
     }
   }
 
   if (options.unattended) {
-    checkFlagsInUnattendedMode(options, {isAppTemplate, isNextJs})
+    checkFlagsInUnattendedMode(options, {effectiveProjectName, isAppTemplate, isNextJs})
   }
 
   trace.start()
@@ -127,10 +128,10 @@ export async function initAction(options: InitOptions, context: InitContext): Pr
   }
 
   let newProject: string | undefined
-  if (options.projectName) {
+  if (effectiveProjectName) {
     newProject = await createProjectFromName({
       coupon: options.coupon,
-      createProjectName: options.projectName,
+      createProjectName: effectiveProjectName,
       dataset: options.dataset,
       organization: options.organization,
       planId,
@@ -289,7 +290,11 @@ export async function initAction(options: InitOptions, context: InitContext): Pr
 
 function checkFlagsInUnattendedMode(
   options: InitOptions,
-  {isAppTemplate, isNextJs}: {isAppTemplate: boolean; isNextJs: boolean},
+  {
+    effectiveProjectName,
+    isAppTemplate,
+    isNextJs,
+  }: {effectiveProjectName: string | undefined; isAppTemplate: boolean; isNextJs: boolean},
 ): void {
   debug('Unattended mode, validating required options')
 
@@ -298,7 +303,7 @@ function checkFlagsInUnattendedMode(
       throw new InitError('`--output-path` must be specified in unattended mode', 1)
     }
 
-    const hasProjectFlag = Boolean(options.project || options.projectName)
+    const hasProjectFlag = Boolean(options.project || effectiveProjectName)
 
     if (!hasProjectFlag && !options.organization) {
       throw new InitError(
@@ -315,7 +320,7 @@ function checkFlagsInUnattendedMode(
     throw new InitError('`--output-path` must be specified in unattended mode', 1)
   }
 
-  if (!options.project && !options.projectName) {
+  if (!options.project && !effectiveProjectName) {
     throw new InitError(
       '`--project <id>` or `--project-name <name>` must be specified in unattended mode',
       1,

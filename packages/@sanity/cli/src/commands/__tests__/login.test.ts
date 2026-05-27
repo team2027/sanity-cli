@@ -1331,6 +1331,28 @@ describe('#login', {timeout: 10_000}, () => {
         open: true,
       })
     })
+
+    test('respects --no-open in non-interactive mode', async () => {
+      mockedGetCliToken.mockResolvedValue('')
+      mockedIsInteractive.mockReturnValue(false)
+
+      mockApi({
+        apiVersion: AUTH_API_VERSION,
+        method: 'get',
+        uri: '/auth/providers',
+      }).reply(200, {
+        providers: [{name: 'google', title: 'Google', url: 'https://api.sanity.io/auth/google'}],
+      })
+
+      const {error, stdout} = await testCommand(LoginCommand, ['--no-open'])
+
+      if (error) throw error
+      expect(stdout).toContain('Please open a browser at')
+      expect(stdout).not.toContain('Opening browser at')
+      expect(mockedStartBackgroundLogin).toHaveBeenCalledWith('https://api.sanity.io/auth/google', {
+        open: false,
+      })
+    })
   })
 
   describe('--sso-provider Flag', () => {
