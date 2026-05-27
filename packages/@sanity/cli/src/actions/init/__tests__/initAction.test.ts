@@ -295,6 +295,60 @@ describe('initAction (direct)', () => {
     expect(initError.exitCode).toBe(1)
   })
 
+  test('unattended --project-name with multiple orgs lists them and hints', async () => {
+    mockValidateSession.mockResolvedValue({
+      email: 'test@example.com',
+      id: 'user-123',
+      name: 'Test User',
+      provider: 'google',
+    })
+
+    mockApi({
+      apiVersion: ORGANIZATIONS_API_VERSION,
+      uri: '/organizations',
+    }).reply(200, [
+      {id: 'org-a', name: 'Alpha Org', slug: 'alpha'},
+      {id: 'org-b', name: 'Beta Org', slug: 'beta'},
+    ])
+
+    mockApi({
+      apiVersion: ORGANIZATIONS_API_VERSION,
+      uri: '/organizations/org-a/grants',
+    }).reply(200, {
+      'sanity.organization.projects': [{grants: [{name: 'attach'}]}],
+    })
+
+    mockApi({
+      apiVersion: ORGANIZATIONS_API_VERSION,
+      uri: '/organizations/org-b/grants',
+    }).reply(200, {
+      'sanity.organization.projects': [{grants: [{name: 'attach'}]}],
+    })
+
+    const context = createTestContext()
+    const options: InitOptions = {
+      ...defaultOptions,
+      bare: true,
+      projectName: 'My New Project',
+      unattended: true,
+    }
+
+    let caughtError: unknown
+    try {
+      await initAction(options, context)
+    } catch (error) {
+      caughtError = error
+    }
+
+    expect(caughtError).toBeInstanceOf(InitError)
+    const initError = caughtError as InitError
+    expect(initError.message).toContain('Multiple organizations available')
+    expect(initError.message).toContain('org-a (Alpha Org)')
+    expect(initError.message).toContain('org-b (Beta Org)')
+    expect(initError.message).toContain('hint: sanity init --organization org-a')
+    expect(initError.exitCode).toBe(1)
+  })
+
   test('unattended without --project/--project-name derives projectName from package.json name', async () => {
     mockValidateSession.mockResolvedValue({
       email: 'test@example.com',

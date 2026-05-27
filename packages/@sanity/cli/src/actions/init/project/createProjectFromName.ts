@@ -47,8 +47,16 @@ export async function createProjectFromName({
           1,
         )
       }
+      if (withAttach.length > 1) {
+        const orgList = withAttach.map(({organization: o}) => `  ${o.id} (${o.name})`).join('\n')
+        throw new InitError(
+          `Multiple organizations available:\n${orgList}\n` +
+            `hint: sanity init --organization ${withAttach[0].organization.id} --project-name "my-project" -y`,
+          1,
+        )
+      }
       orgForCreateProjectFlag = withAttach[0].organization.id
-      debug('unattended mode: picked first org with attach grant: %s', orgForCreateProjectFlag)
+      debug('unattended mode: single org with attach grant: %s', orgForCreateProjectFlag)
     } else {
       orgForCreateProjectFlag = await promptUserForOrganization({
         organizations,

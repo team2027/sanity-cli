@@ -70,9 +70,10 @@ export async function getProvider({
     }
 
     if (!isInteractive() && realProviderNames.length > 1) {
-      const preferred = providers.find((p) => p.name === 'google') ?? providers[0]
-      debug('Non-interactive mode: auto-selected provider %s', preferred.name)
-      return preferred
+      throw new Error(
+        `Multiple login providers available: ${realProviderNames.join(', ')}.\n` +
+          `hint: sanity login --provider ${realProviderNames[0]}`,
+      )
     }
 
     const provider = await promptForProviders(providers)

@@ -1246,7 +1246,7 @@ describe('#login', {timeout: 10_000}, () => {
   })
 
   describe('Non-Interactive Mode', () => {
-    test('auto-selects provider when multiple OAuth providers in non-interactive mode', async () => {
+    test('lists providers and hints when multiple OAuth providers in non-interactive mode', async () => {
       mockedGetCliToken.mockResolvedValue('')
       mockedIsInteractive.mockReturnValue(false)
 
@@ -1263,11 +1263,9 @@ describe('#login', {timeout: 10_000}, () => {
 
       const {error} = await testCommand(LoginCommand, [])
 
-      // Auto-pick proceeds to login flow which fails because no real browser/callback
-      // but the important thing is it does NOT throw "Multiple login providers" error
-      if (error) {
-        expect(error.message).not.toContain('Multiple login providers available')
-      }
+      expect(error).toBeInstanceOf(Error)
+      expect(error?.message).toContain('Multiple login providers available: google, github')
+      expect(error?.message).toContain('hint: sanity login --provider google')
     })
 
     test('throws error listing SSO providers when multiple SSO providers in non-interactive mode', async () => {
