@@ -395,6 +395,7 @@ async function ensureAuthenticated(
     try {
       await login({
         output,
+        provider: 'google',
         telemetry: trace.newContext('login'),
       })
     } catch (error) {
