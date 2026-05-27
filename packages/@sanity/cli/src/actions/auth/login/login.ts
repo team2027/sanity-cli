@@ -4,20 +4,18 @@ import {
   getUserConfig,
   isInteractive,
   type Output,
-  setCliUserConfig,
   subdebug,
 } from '@sanity/cli-core'
 import {spinner} from '@sanity/cli-core/ux'
-import {isHttpError} from '@sanity/client'
 import open from 'open'
 
-import {logout} from '../../../services/auth.js'
 import {LoginTrace} from '../../../telemetry/login.telemetry.js'
 import {canLaunchBrowser} from '../../../util/canLaunchBrowser.js'
 import {startServerForTokenCallback} from '../authServer.js'
-import {startBackgroundLogin} from '../backgroundLogin.js'
+import {getBackgroundLoginConfigPath, startBackgroundLogin} from '../backgroundLogin.js'
 import {getProvider} from './getProvider.js'
-import {isSanityApiToken, validateToken} from './validateToken.js'
+import {storeAuthToken} from './storeAuthToken.js'
+import {validateToken} from './validateToken.js'
 
 const debug = subdebug('login')
 
@@ -99,7 +97,7 @@ export async function login(options: LoginOptions) {
     }
     output.log(`Authentication is running in the background (PID ${pid}, port ${port}).`)
     output.log(
-      `The token will be saved to ~/.config/sanity/config.json when login completes (~30-60 seconds).`,
+      `The token will be saved to ${getBackgroundLoginConfigPath()} when login completes (~30-60 seconds).`,
     )
     output.log(`Run \`sanity projects list\` to verify when ready.\n`)
 
@@ -142,34 +140,4 @@ export async function login(options: LoginOptions) {
   await storeAuthToken(authToken, previousToken, output)
 
   trace.complete()
-}
-
-async function storeAuthToken(
-  authToken: string,
-  previousToken: string | undefined,
-  output: Output,
-) {
-  setCliUserConfig('authToken', authToken)
-  getUserConfig().delete('telemetryConsent')
-
-  // If we had a session previously, attempt to clear it
-  if (previousToken && previousToken !== authToken) {
-    await invalidateAuthToken(previousToken, output)
-  }
-}
-
-async function invalidateAuthToken(token: string, output: Output) {
-  try {
-    if (await isSanityApiToken(token)) return
-  } catch (err) {
-    if (isHttpError(err) && err.statusCode === 401) return
-  }
-
-  try {
-    await logout(token)
-  } catch (err) {
-    if (!isHttpError(err) || err.statusCode !== 401) {
-      output.warn('Failed to invalidate previous session')
-    }
-  }
 }

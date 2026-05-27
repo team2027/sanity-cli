@@ -1,12 +1,17 @@
-import {mockApi, testCommand} from '@sanity/cli-test'
+import {createTestToken, mockApi, testCommand} from '@sanity/cli-test'
 import {cleanAll, pendingMocks} from 'nock'
-import {afterEach, describe, expect, test} from 'vitest'
+import {afterEach, beforeEach, describe, expect, test, vi} from 'vitest'
 
 import {ORGANIZATIONS_API_VERSION} from '../../../services/organizations.js'
 import {List} from '../list.js'
 
 describe('#list', () => {
+  beforeEach(() => {
+    createTestToken('test-token')
+  })
+
   afterEach(() => {
+    vi.unstubAllEnvs()
     const pending = pendingMocks()
     cleanAll()
     expect(pending, 'pending mocks').toEqual([])

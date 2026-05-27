@@ -40,6 +40,7 @@ const mockedStartBackgroundLogin = vi.hoisted(() =>
   }),
 )
 vi.mock('../../actions/auth/backgroundLogin.js', () => ({
+  getBackgroundLoginConfigPath: vi.fn(() => '/tmp/sanity/config.json'),
   startBackgroundLogin: mockedStartBackgroundLogin,
 }))
 
