@@ -132,7 +132,6 @@ export class InitCommand extends SanityCommand<typeof InitCommand> {
     }),
     'output-path': Flags.string({
       description: 'Path to write studio project to',
-      exclusive: ['bare'],
       helpValue: '<path>',
     }),
     'overwrite-files': Flags.boolean({

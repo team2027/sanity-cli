@@ -77,7 +77,6 @@ describe('#init: oclif command setup', () => {
     {flag1: 'env=.env', flag2: 'bare'},
     {flag1: 'git=test', flag2: 'bare'},
     {flag1: 'no-git', flag2: 'git=test'},
-    {flag1: 'output-path=/test-path', flag2: 'bare'},
     {flag1: 'package-manager=pnpm', flag2: 'bare'},
     {flag1: 'template=test', flag2: 'bare'},
     {flag1: 'typescript', flag2: 'bare'},
@@ -99,6 +98,20 @@ describe('#init: oclif command setup', () => {
       `--${name2}=${value2} cannot also be provided when using --${name1}`,
     )
     expect(error?.oclif?.exit).toBe(2)
+  })
+
+  test('throws error with hint when --bare and --output-path are both passed', async () => {
+    const {error} = await testCommand(InitCommand, ['--bare', '--output-path=/test-path'], {
+      mocks: {
+        isInteractive: true,
+        token: 'test-token',
+      },
+    })
+
+    expect(error?.message).toContain('--bare cannot be used with --output-path')
+    expect(error?.message).toContain('hint:')
+    expect(error?.message).toContain('sanity init --bare --project-name')
+    expect(error?.oclif?.exit).toBe(1)
   })
 
   test.each([

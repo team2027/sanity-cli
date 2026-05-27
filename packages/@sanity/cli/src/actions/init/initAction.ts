@@ -94,6 +94,15 @@ export async function initAction(options: InitOptions, context: InitContext): Pr
     }
   }
 
+  if (options.bare && options.outputPath) {
+    throw new InitError(
+      '--bare cannot be used with --output-path. Use --bare to create the project only, then scaffold the studio separately.\n' +
+        'hint: sanity init --bare --project-name "my-project" --dataset production -y\n' +
+        '      sanity init --project <id> --output-path ./studio -y',
+      1,
+    )
+  }
+
   if (options.unattended) {
     checkFlagsInUnattendedMode(options, {effectiveProjectName, isAppTemplate, isNextJs})
   }
