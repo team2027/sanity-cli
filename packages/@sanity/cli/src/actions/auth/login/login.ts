@@ -98,10 +98,10 @@ export async function login(options: LoginOptions) {
     debug('Background login child PID %d listening on port %d', pid, port)
     output.log(`Authentication is running in the background.`)
     output.log(
-      `Please complete login in the browser. Token saves to ${getBackgroundLoginConfigPath()} when done.`,
+      `Wait for the user to complete the login in their browser. Token saves to ${getBackgroundLoginConfigPath()} when done.`,
     )
     output.log('')
-    output.log(`Wait for login to complete (~30-60 seconds), then check: sanity auth status`)
+    output.log(`Wait ~30-60 seconds, then check: sanity auth status`)
     output.log(`To switch providers or cancel: sanity auth cancel`)
     output.log(`Do not run other sanity commands until \`sanity auth status\` confirms login.\n`)
 
