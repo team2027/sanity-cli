@@ -99,7 +99,12 @@ export async function login(options: LoginOptions) {
     output.log(
       `The token will be saved to ${getBackgroundLoginConfigPath()} when login completes (~30-60 seconds).`,
     )
-    output.log(`Run \`sanity projects list\` to verify when ready.\n`)
+    output.log('')
+    output.log(
+      `IMPORTANT: Do not kill PID ${pid} — it is the callback server waiting for the OAuth redirect.`,
+    )
+    output.log(`Wait at least 120 seconds, then check: sanity auth status`)
+    output.log(`If not logged in after 120s, re-run: sanity login --provider ${provider.name}\n`)
 
     trace.complete()
     return
