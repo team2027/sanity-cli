@@ -56,7 +56,10 @@ export class List extends SanityCommand<typeof List> {
       organizations = await listOrganizations()
     } catch (error) {
       organizationsDebug('Error listing organizations', error)
-      if (isHttpError(error) && (error.statusCode === 401 || error.statusCode === 403)) {
+      const isAuthError =
+        (error instanceof Error && error.message.includes('must login first')) ||
+        (isHttpError(error) && (error.statusCode === 401 || error.statusCode === 403))
+      if (isAuthError) {
         this.error(
           `Not logged in. Run \`sanity login\` or set the SANITY_AUTH_TOKEN environment variable.${formatHint('sanity login --provider google')}`,
           {exit: 1},

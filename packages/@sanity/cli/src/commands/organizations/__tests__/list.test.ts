@@ -100,6 +100,18 @@ describe('#list', () => {
     expect(orgBIndex).toBeLessThan(orgAIndex)
   })
 
+  test('displays auth error with hint when not logged in', async () => {
+    vi.unstubAllEnvs()
+
+    const {error} = await testCommand(List)
+
+    expect(error).toBeInstanceOf(Error)
+    expect(error?.message).toContain('Not logged in')
+    expect(error?.message).toContain('sanity login')
+    expect(error?.message).toContain('[Hint]')
+    expect(error?.oclif?.exit).toBe(1)
+  })
+
   test('displays an error if the API request fails', async () => {
     mockApi({
       apiVersion: ORGANIZATIONS_API_VERSION,

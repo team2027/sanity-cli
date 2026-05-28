@@ -108,8 +108,12 @@ describe('#init: oclif command setup', () => {
       },
     })
 
-    expect(error?.message).toContain('--project-name')
+    expect(error).toBeInstanceOf(Error)
+    expect(error?.message).toContain(
+      'Flag --create-project expects a value. Use --project-name instead:',
+    )
     expect(error?.message).toContain('[Hint]')
+    expect(error?.message).toContain('sanity init --project-name')
     expect(error?.oclif?.exit).toBe(2)
   })
 
@@ -121,6 +125,7 @@ describe('#init: oclif command setup', () => {
       },
     })
 
+    expect(error).toBeInstanceOf(Error)
     expect(error?.message).toContain('--bare cannot be used with --output-path')
     expect(error?.message).toContain('[Hint]')
     expect(error?.message).toContain('sanity init --bare --project-name')

@@ -154,14 +154,8 @@ describe('#list', () => {
     const {stdout} = await testCommand(List, ['--json'])
 
     const parsed = JSON.parse(stdout)
+    // Default sort is created desc
     expect(parsed).toEqual([
-      {
-        created: '2023-01-01',
-        id: 'project1',
-        members: 2,
-        name: 'Project One',
-        url: 'https://www.sanity.io/manage/project/project1',
-      },
       {
         created: '2023-01-02',
         id: 'project2',
@@ -169,7 +163,61 @@ describe('#list', () => {
         name: 'Project Two',
         url: 'https://www.sanity.io/manage/project/project2',
       },
+      {
+        created: '2023-01-01',
+        id: 'project1',
+        members: 2,
+        name: 'Project One',
+        url: 'https://www.sanity.io/manage/project/project1',
+      },
     ])
+  })
+
+  test('applies sort and order to JSON output', async () => {
+    mockApi({
+      apiVersion: PROJECTS_API_VERSION,
+      query: {onlyExplicitMembership: 'true'},
+      uri: '/projects',
+    }).reply(200, [
+      {
+        createdAt: '2023-01-01',
+        displayName: 'Project One',
+        id: 'project1',
+        members: ['user1', 'user2', 'user3'],
+      },
+      {
+        createdAt: '2023-01-02',
+        displayName: 'Project Two',
+        id: 'project2',
+        members: ['user1'],
+      },
+      {
+        createdAt: '2023-01-03',
+        displayName: 'Project Three',
+        id: 'project3',
+        members: ['user1', 'user2'],
+      },
+    ])
+
+    const {stdout} = await testCommand(List, ['--json', '--sort', 'members', '--order', 'asc'])
+
+    const parsed = JSON.parse(stdout)
+    expect(parsed).toHaveLength(3)
+    expect(parsed[0].members).toBe(1)
+    expect(parsed[1].members).toBe(2)
+    expect(parsed[2].members).toBe(3)
+  })
+
+  test('displays auth error with hint when not logged in', async () => {
+    vi.unstubAllEnvs()
+
+    const {error} = await testCommand(List)
+
+    expect(error).toBeInstanceOf(Error)
+    expect(error?.message).toContain('Not logged in')
+    expect(error?.message).toContain('sanity login')
+    expect(error?.message).toContain('[Hint]')
+    expect(error?.oclif?.exit).toBe(1)
   })
 
   test('displays an error if the API request fails', async () => {

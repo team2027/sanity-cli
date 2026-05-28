@@ -56,19 +56,16 @@ export class List extends SanityCommand<typeof List> {
       const projects = await listProjects()
 
       if (json) {
-        this.log(
-          JSON.stringify(
-            projects.map(({createdAt, displayName, id, members = []}) => ({
-              created: createdAt,
-              id,
-              members: members.length,
-              name: displayName,
-              url: `https://www.sanity.io/manage/project/${id}`,
-            })),
-            null,
-            2,
-          ),
-        )
+        const mapped = projects.map(({createdAt, displayName, id, members = []}) => ({
+          created: createdAt,
+          id,
+          members: members.length,
+          name: displayName,
+          url: `https://www.sanity.io/manage/project/${id}`,
+        }))
+        const sorted = sortBy(mapped, [sort])
+        const ordered = order === 'asc' ? sorted : sorted.toReversed()
+        this.log(JSON.stringify(ordered, null, 2))
         return
       }
 
@@ -99,7 +96,10 @@ export class List extends SanityCommand<typeof List> {
       for (const row of rows) this.log(printRow(row))
     } catch (error) {
       projectsDebug('Error listing projects', error)
-      if (isHttpError(error) && (error.statusCode === 401 || error.statusCode === 403)) {
+      const isAuthError =
+        (error instanceof Error && error.message.includes('must login first')) ||
+        (isHttpError(error) && (error.statusCode === 401 || error.statusCode === 403))
+      if (isAuthError) {
         this.error(
           `Not logged in. Run \`sanity login\` or set the SANITY_AUTH_TOKEN environment variable.${formatHint('sanity login --provider google')}`,
           {exit: 1},
