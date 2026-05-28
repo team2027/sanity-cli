@@ -2,6 +2,7 @@ import {Args, Flags} from '@oclif/core'
 import {SanityCommand, subdebug} from '@sanity/cli-core'
 import {isHttpError} from '@sanity/client'
 
+import {isBackgroundLoginInProgress} from '../../actions/auth/backgroundLogin.js'
 import {validateOrganizationName} from '../../actions/organizations/validateOrganizationName.js'
 import {createOrganization} from '../../services/organizations.js'
 import {formatHint} from '../../util/formatHint.js'
@@ -58,6 +59,12 @@ export class Create extends SanityCommand<typeof Create> {
         (error instanceof Error && error.message.includes('must login first')) ||
         (isHttpError(error) && (error.statusCode === 401 || error.statusCode === 403))
       if (isAuthError) {
+        if (isBackgroundLoginInProgress()) {
+          this.error(
+            'Login pending — callback server is running, waiting for OAuth redirect. Wait 30-60 seconds and re-check, or run `sanity auth cancel` to stop.',
+            {exit: 1},
+          )
+        }
         this.error(
           `Not logged in. Run \`sanity login\` or set the SANITY_AUTH_TOKEN environment variable.${formatHint('sanity login --provider google')}`,
           {exit: 1},

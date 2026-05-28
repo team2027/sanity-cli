@@ -70,7 +70,7 @@ describe('#auth status', () => {
     expect(error).toBeInstanceOf(Error)
     expect(error?.oclif?.exit).toBe(1)
     const parsed = JSON.parse(stdout)
-    expect(parsed).toEqual({loggedIn: false})
+    expect(parsed).toEqual({loggedIn: false, pending: false})
     expect(mockValidateSession).toHaveBeenCalledOnce()
   })
 

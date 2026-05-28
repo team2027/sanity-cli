@@ -6,6 +6,7 @@ import {isHttpError} from '@sanity/client'
 import size from 'lodash-es/size.js'
 import sortBy from 'lodash-es/sortBy.js'
 
+import {isBackgroundLoginInProgress} from '../../actions/auth/backgroundLogin.js'
 import {listProjects} from '../../services/projects.js'
 import {formatHint} from '../../util/formatHint.js'
 
@@ -100,6 +101,12 @@ export class List extends SanityCommand<typeof List> {
         (error instanceof Error && error.message.includes('must login first')) ||
         (isHttpError(error) && (error.statusCode === 401 || error.statusCode === 403))
       if (isAuthError) {
+        if (isBackgroundLoginInProgress()) {
+          this.error(
+            'Login pending — callback server is running, waiting for OAuth redirect. Wait 30-60 seconds and re-check, or run `sanity auth cancel` to stop.',
+            {exit: 1},
+          )
+        }
         this.error(
           `Not logged in. Run \`sanity login\` or set the SANITY_AUTH_TOKEN environment variable.${formatHint('sanity login --provider google')}`,
           {exit: 1},

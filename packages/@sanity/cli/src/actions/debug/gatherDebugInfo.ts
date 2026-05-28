@@ -10,6 +10,7 @@ import {
 
 import {getProjectById} from '../../services/projects.js'
 import {getCliUser, getProjectUser} from '../../services/user.js'
+import {isBackgroundLoginInProgress} from '../auth/backgroundLogin.js'
 import {getCliVersion} from '../../util/getCliVersion.js'
 import {detectCliInstallation} from '../../util/packageManager/installationInfo/index.js'
 import {
@@ -24,6 +25,11 @@ import {
 export async function gatherUserInfo(projectId: string | undefined): Promise<Error | UserInfo> {
   const token = await getCliToken()
   if (!token) {
+    if (isBackgroundLoginInProgress()) {
+      return new Error(
+        'Login pending — callback server is running, waiting for OAuth redirect. Wait 30-60 seconds and re-check, or run `sanity auth cancel` to stop.',
+      )
+    }
     return new Error('Not logged in')
   }
 

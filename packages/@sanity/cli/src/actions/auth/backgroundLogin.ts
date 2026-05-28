@@ -187,6 +187,12 @@ export async function startBackgroundLogin(
   return {loginUrl, pid, port}
 }
 
+export function isBackgroundLoginInProgress(): boolean {
+  const info = readPidFile()
+  if (!info) return false
+  return isPidFileFresh(info) && isProcessAlive(info.pid)
+}
+
 export function cancelBackgroundLogin(): {cancelled: boolean; pid?: number} {
   const info = readPidFile()
   if (!info) {

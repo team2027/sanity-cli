@@ -1,6 +1,7 @@
 import {Flags} from '@oclif/core'
 import {SanityCommand} from '@sanity/cli-core'
 
+import {isBackgroundLoginInProgress} from '../../actions/auth/backgroundLogin.js'
 import {validateSession} from '../../actions/auth/ensureAuthenticated.js'
 import {getProviderName} from '../../actions/auth/getProviderName.js'
 
@@ -44,10 +45,19 @@ export class Status extends SanityCommand<typeof Status> {
       return
     }
 
+    const pending = isBackgroundLoginInProgress()
+
     if (json) {
-      this.log(JSON.stringify({loggedIn: false}, null, 2))
+      this.log(JSON.stringify({loggedIn: false, pending}, null, 2))
       this.exit(1)
       return
+    }
+
+    if (pending) {
+      this.error(
+        'Login pending — callback server is running, waiting for OAuth redirect. Wait 30-60 seconds and re-check, or run `sanity auth cancel` to stop.',
+        {exit: 1},
+      )
     }
 
     this.error(
