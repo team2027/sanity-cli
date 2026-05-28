@@ -305,32 +305,6 @@ describe('#init: oclif command setup', () => {
     )
   })
 
-  test('throws descriptive error when in unattended mode, `project-name` is set, and user has no organizations', async () => {
-    mocks.detectFrameworkRecord.mockResolvedValueOnce({
-      name: 'Next.js',
-      slug: 'nextjs',
-    })
-
-    mockApi({
-      apiVersion: ORGANIZATIONS_API_VERSION,
-      uri: '/organizations',
-    }).reply(200, [])
-
-    const {error} = await testCommand(
-      InitCommand,
-      ['--yes', '--dataset=production', '--project-name=test'],
-      {
-        mocks: {
-          ...defaultMocks,
-        },
-      },
-    )
-
-    expect(error?.message).toContain('No organization found for new project')
-    expect(error?.message).toContain('sanity organizations list')
-    expect(error?.oclif?.exit).toBe(1)
-  })
-
   test('logs properly if app template flag is not valid', async () => {
     mocks.detectFrameworkRecord.mockResolvedValueOnce(null)
 

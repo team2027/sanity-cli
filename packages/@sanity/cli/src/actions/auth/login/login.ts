@@ -95,16 +95,15 @@ export async function login(options: LoginOptions) {
     } else {
       output.log(`\nPlease open a browser at ${loginUrl}\n`)
     }
-    output.log(`Authentication is running in the background (PID ${pid}, port ${port}).`)
+    debug('Background login child PID %d listening on port %d', pid, port)
+    output.log(`Authentication is running in the background.`)
     output.log(
-      `The token will be saved to ${getBackgroundLoginConfigPath()} when login completes (~30-60 seconds).`,
+      `Please complete login in the browser. Token saves to ${getBackgroundLoginConfigPath()} when done.`,
     )
     output.log('')
-    output.log(
-      `IMPORTANT: Do not kill PID ${pid} — it is the callback server waiting for the OAuth redirect.`,
-    )
-    output.log(`Wait at least 120 seconds, then check: sanity auth status`)
-    output.log(`If not logged in after 120s, re-run: sanity login --provider ${provider.name}\n`)
+    output.log(`Wait for login to complete (~30-60 seconds), then check: sanity auth status`)
+    output.log(`To switch providers or cancel: sanity auth cancel`)
+    output.log(`Do not run other sanity commands until \`sanity auth status\` confirms login.\n`)
 
     trace.complete()
     return

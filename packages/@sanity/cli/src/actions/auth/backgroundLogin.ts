@@ -1,6 +1,6 @@
 import {spawn} from 'node:child_process'
 import {randomUUID} from 'node:crypto'
-import {mkdirSync, readFileSync, writeFileSync} from 'node:fs'
+import {mkdirSync, readFileSync, unlinkSync, writeFileSync} from 'node:fs'
 import {connect} from 'node:net'
 import {homedir} from 'node:os'
 import {dirname, join} from 'node:path'
@@ -25,7 +25,7 @@ function getConfigDir(): string {
 }
 
 function getPidFilePath(): string {
-  return join(getConfigDir(), '.bg-login.json')
+  return join(getConfigDir(), '.auth-callback.json')
 }
 
 interface PidFileInfo {
@@ -185,4 +185,29 @@ export async function startBackgroundLogin(
 
   debug('Background login child (PID %d) listening on port %d', pid, port)
   return {loginUrl, pid, port}
+}
+
+export function cancelBackgroundLogin(): {cancelled: boolean; pid?: number} {
+  const info = readPidFile()
+  if (!info) {
+    return {cancelled: false}
+  }
+
+  const pidFilePath = getPidFilePath()
+  try {
+    unlinkSync(pidFilePath)
+  } catch {
+    // already removed
+  }
+
+  if (isProcessAlive(info.pid)) {
+    try {
+      process.kill(info.pid, 'SIGTERM')
+    } catch {
+      // already dead
+    }
+    return {cancelled: true, pid: info.pid}
+  }
+
+  return {cancelled: false}
 }

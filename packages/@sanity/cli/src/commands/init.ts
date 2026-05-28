@@ -3,9 +3,9 @@ import {CLIError} from '@oclif/core/errors'
 import {SanityCommand} from '@sanity/cli-core'
 
 import {initAction} from '../actions/init/initAction.js'
-import {formatHint} from '../util/formatHint.js'
 import {InitError} from '../actions/init/initError.js'
 import {flagsToInitOptions} from '../actions/init/types.js'
+import {formatHint} from '../util/formatHint.js'
 import {getSanityEnv} from '../util/getSanityEnv.js'
 
 export class InitCommand extends SanityCommand<typeof InitCommand> {

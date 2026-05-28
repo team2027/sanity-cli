@@ -35,7 +35,7 @@ if (!nonce) {
 }
 
 const shouldOpen = process.argv.includes('--open')
-const pidFilePath = join(dirname(getBackgroundLoginConfigPath()), '.bg-login.json')
+const pidFilePath = join(dirname(getBackgroundLoginConfigPath()), '.auth-callback.json')
 
 function cleanupPidFile(): void {
   if (!existsSync(pidFilePath)) return

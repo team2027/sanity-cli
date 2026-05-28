@@ -260,7 +260,7 @@ describe('initAction (direct)', () => {
     expect(combined).toContain('test-project')
   })
 
-  test('unattended --project-name with zero orgs throws descriptive error pointing to organizations list', async () => {
+  test('unattended --project-name with zero orgs auto-creates an organization', async () => {
     mockValidateSession.mockResolvedValue({
       email: 'test@example.com',
       id: 'user-123',
@@ -273,6 +273,32 @@ describe('initAction (direct)', () => {
       uri: '/organizations',
     }).reply(200, [])
 
+    mockApi({
+      apiVersion: ORGANIZATIONS_API_VERSION,
+      method: 'post',
+      uri: '/organizations',
+    }).reply(200, {
+      createdByUserId: 'user-123',
+      defaultRoleName: null,
+      features: [],
+      id: 'org-auto',
+      members: [],
+      name: 'Test User',
+      slug: 'test-user',
+    })
+
+    mockApi({
+      apiVersion: CREATE_PROJECT_API_VERSION,
+      method: 'post',
+      uri: '/projects',
+    }).reply(200, {displayName: 'My New Project', projectId: 'test-project'})
+
+    mockApi({
+      apiVersion: PROJECT_FEATURES_API_VERSION,
+      method: 'get',
+      uri: '/features',
+    }).reply(200, ['privateDataset'])
+
     const context = createTestContext()
     const options: InitOptions = {
       ...defaultOptions,
@@ -281,18 +307,12 @@ describe('initAction (direct)', () => {
       unattended: true,
     }
 
-    let caughtError: unknown
-    try {
-      await initAction(options, context)
-    } catch (error) {
-      caughtError = error
-    }
+    await initAction(options, context)
 
-    expect(caughtError).toBeInstanceOf(InitError)
-    const initError = caughtError as InitError
-    expect(initError.message).toContain('No organization found for new project')
-    expect(initError.message).toContain('sanity organizations list')
-    expect(initError.exitCode).toBe(1)
+    const logCalls = vi.mocked(context.output.log).mock.calls.map((call) => call[0])
+    const combined = logCalls.join('\n')
+
+    expect(combined).toContain('test-project')
   })
 
   test('unattended --project-name with multiple orgs lists them and hints', async () => {
