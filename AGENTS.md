@@ -163,6 +163,12 @@ jq '{total: .numTotalTests, passed: .numPassedTests, failed: .numFailedTests, fi
 - Enable debug logs: `DEBUG=sanity:* npx sanity <command>`
 - Most commands need to be run within one of the fixture folders.
 
+# Auth Background Login
+
+- `backgroundLoginChild.ts` is spawned dynamically by `backgroundLogin.ts`; keep it listed as a `knip` entry.
+- The background login child writes `.auth-callback.json` before printing the login URL, and removes it on exit when the PID and nonce match.
+- Token persistence side effects live in `actions/auth/login/storeAuthToken.ts`; use it for both foreground and background login token writes.
+
 ## Cursor Cloud specific instructions
 
 - The update script runs `pnpm install --frozen-lockfile` and `pnpm build:cli` on startup. Dependencies and build artifacts should already be up to date when a session begins.

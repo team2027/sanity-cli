@@ -56,6 +56,8 @@ const baseConfig = {
         'src/hooks/**/*.ts',
         // Worker files
         'src/**/*.worker.ts',
+        // Spawned dynamically by backgroundLogin.ts
+        'src/actions/auth/backgroundLoginChild.ts',
         'package.config.ts',
       ],
       oclif: {
@@ -69,8 +71,6 @@ const baseConfig = {
         'src/**/*.worker.ts',
         'package.config.ts',
       ],
-      // debug is used for type checking
-      ignoreDependencies: ['@types/debug'],
       project,
     },
     'packages/@sanity/cli-core': {

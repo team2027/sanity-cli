@@ -123,6 +123,43 @@ describe('#cors:add', () => {
     expect(stdout).toContain('CORS origin added successfully')
   })
 
+  test('accepts --project as alias for --project-id', async () => {
+    const origin = 'https://example.com'
+
+    mockApi({
+      apiVersion: CORS_API_VERSION,
+      method: 'post',
+      uri: '/projects/alias-project/cors',
+    }).reply(201, {
+      allowCredentials: true,
+      createdAt: '2023-01-01T00:00:00Z',
+      deletedAt: null,
+      id: 1,
+      origin: origin,
+      projectId: 'alias-project',
+      updatedAt: null,
+    })
+
+    const {error, stdout} = await testCommand(
+      Add,
+      [origin, '--credentials', '--project', 'alias-project'],
+      {
+        mocks: {
+          cliConfig: {api: {}},
+          projectRoot: {
+            directory: '/test/path',
+            path: '/test/path/sanity.config.ts',
+            type: 'studio' as const,
+          },
+          token: 'test-token',
+        },
+      },
+    )
+
+    if (error) throw error
+    expect(stdout).toContain('CORS origin added successfully')
+  })
+
   test('fails when no project ID is available', async () => {
     const {error} = await testCommand(Add, ['https://example.com'], {
       mocks: {

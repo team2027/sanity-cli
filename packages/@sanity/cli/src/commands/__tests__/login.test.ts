@@ -31,6 +31,19 @@ vi.mock('@sanity/cli-core/ux', async () => {
 // Mock browser launching
 vi.mock('open')
 
+// Mock background login (spawned in non-interactive mode)
+const mockedStartBackgroundLogin = vi.hoisted(() =>
+  vi.fn().mockResolvedValue({
+    loginUrl: 'https://api.sanity.io/auth/google?type=token&origin=http://localhost:4321/callback',
+    pid: 99_999,
+    port: 4321,
+  }),
+)
+vi.mock('../../actions/auth/backgroundLogin.js', () => ({
+  getBackgroundLoginConfigPath: vi.fn(() => '/tmp/sanity/config.json'),
+  startBackgroundLogin: mockedStartBackgroundLogin,
+}))
+
 // Mock platform detection
 vi.mock('../../util/canLaunchBrowser.js', () => ({
   canLaunchBrowser: vi.fn().mockReturnValue(true),
@@ -1234,7 +1247,7 @@ describe('#login', {timeout: 10_000}, () => {
   })
 
   describe('Non-Interactive Mode', () => {
-    test('throws error listing providers when multiple OAuth providers in non-interactive mode', async () => {
+    test('lists providers and hints when multiple OAuth providers in non-interactive mode', async () => {
       mockedGetCliToken.mockResolvedValue('')
       mockedIsInteractive.mockReturnValue(false)
 
@@ -1253,31 +1266,8 @@ describe('#login', {timeout: 10_000}, () => {
 
       expect(error).toBeInstanceOf(Error)
       expect(error?.message).toContain('Multiple login providers available: google, github')
-      expect(error?.message).toContain('`--provider <name>`')
-      expect(error?.oclif?.exit).toBe(1)
-    })
-
-    test('non-interactive error excludes synthetic sso from provider list', async () => {
-      mockedGetCliToken.mockResolvedValue('')
-      mockedIsInteractive.mockReturnValue(false)
-
-      mockApi({
-        apiVersion: AUTH_API_VERSION,
-        method: 'get',
-        uri: '/auth/providers',
-      }).reply(200, {
-        providers: [
-          {name: 'google', title: 'Google', url: 'https://api.sanity.io/auth/google'},
-          {name: 'github', title: 'GitHub', url: 'https://api.sanity.io/auth/github'},
-        ],
-      })
-
-      const {error} = await testCommand(LoginCommand, ['--experimental'])
-
-      expect(error).toBeInstanceOf(Error)
-      expect(error?.message).toContain('google, github')
-      expect(error?.message).not.toContain('sso')
-      expect(error?.oclif?.exit).toBe(1)
+      expect(error?.message).toContain('[Hint]')
+      expect(error?.message).toContain('sanity login --provider google')
     })
 
     test('throws error listing SSO providers when multiple SSO providers in non-interactive mode', async () => {
@@ -1322,14 +1312,46 @@ describe('#login', {timeout: 10_000}, () => {
     test('succeeds non-interactively with a single OAuth provider', async () => {
       mockedGetCliToken.mockResolvedValue('')
       mockedIsInteractive.mockReturnValue(false)
-      mockSingleProviderLogin()
 
-      const commandPromise = testCommand(LoginCommand, [])
-      await simulateOAuthCallback(4321, 'test-session-id')
-      const {error, stdout} = await commandPromise
+      mockApi({
+        apiVersion: AUTH_API_VERSION,
+        method: 'get',
+        uri: '/auth/providers',
+      }).reply(200, {
+        providers: [{name: 'google', title: 'Google', url: 'https://api.sanity.io/auth/google'}],
+      })
+
+      const {error, stdout} = await testCommand(LoginCommand, [])
 
       if (error) throw error
-      expect(stdout).toContain('Login successful')
+      expect(stdout).toContain('Opening browser at')
+      expect(stdout).toContain('Authentication is running in the background')
+      expect(stdout).toContain('~30-60 seconds')
+      expect(mockedStartBackgroundLogin).toHaveBeenCalledWith('https://api.sanity.io/auth/google', {
+        open: true,
+      })
+    })
+
+    test('respects --no-open in non-interactive mode', async () => {
+      mockedGetCliToken.mockResolvedValue('')
+      mockedIsInteractive.mockReturnValue(false)
+
+      mockApi({
+        apiVersion: AUTH_API_VERSION,
+        method: 'get',
+        uri: '/auth/providers',
+      }).reply(200, {
+        providers: [{name: 'google', title: 'Google', url: 'https://api.sanity.io/auth/google'}],
+      })
+
+      const {error, stdout} = await testCommand(LoginCommand, ['--no-open'])
+
+      if (error) throw error
+      expect(stdout).toContain('Please open a browser at')
+      expect(stdout).not.toContain('Opening browser at')
+      expect(mockedStartBackgroundLogin).toHaveBeenCalledWith('https://api.sanity.io/auth/google', {
+        open: false,
+      })
     })
   })
 

@@ -5,6 +5,7 @@ import {SanityCommand} from '@sanity/cli-core'
 import {initAction} from '../actions/init/initAction.js'
 import {InitError} from '../actions/init/initError.js'
 import {flagsToInitOptions} from '../actions/init/types.js'
+import {formatHint} from '../util/formatHint.js'
 import {getSanityEnv} from '../util/getSanityEnv.js'
 
 export class InitCommand extends SanityCommand<typeof InitCommand> {
@@ -132,7 +133,6 @@ export class InitCommand extends SanityCommand<typeof InitCommand> {
     }),
     'output-path': Flags.string({
       description: 'Path to write studio project to',
-      exclusive: ['bare'],
       helpValue: '<path>',
     }),
     'overwrite-files': Flags.boolean({
@@ -207,6 +207,16 @@ export class InitCommand extends SanityCommand<typeof InitCommand> {
       description:
         'Unattended mode, answers "yes" to any "yes/no" prompt and otherwise uses defaults',
     }),
+  }
+
+  protected override async catch(err: Error & {exitCode?: number}): Promise<never> {
+    if (err.message?.includes('Flag --create-project expects a value')) {
+      this.error(
+        `Flag --create-project expects a value. Use --project-name instead:${formatHint('sanity init --project-name "my-project" --dataset production -y')}`,
+        {exit: 2},
+      )
+    }
+    throw err
   }
 
   public async run(): Promise<void> {

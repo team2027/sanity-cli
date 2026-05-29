@@ -1,7 +1,9 @@
-import {testCommand} from '@sanity/cli-test'
+import {createTestClient, mockApi, testCommand} from '@sanity/cli-test'
+import {cleanAll, pendingMocks} from 'nock'
 import {afterEach, describe, expect, test, vi} from 'vitest'
 
 import {selectTemplate} from '../../../actions/init/scaffoldTemplate.js'
+import {ORGANIZATIONS_API_VERSION} from '../../../services/organizations.js'
 import {InitCommand} from '../../init.js'
 
 const mocks = vi.hoisted(() => ({
@@ -27,9 +29,15 @@ vi.mock('../../../prompts/init/promptForTypescript.js', () => ({
 
 vi.mock('@sanity/cli-core', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@sanity/cli-core')>()
+  const globalTestClient = createTestClient({
+    apiVersion: 'v2025-05-14',
+    token: 'test-token',
+  })
+
   return {
     ...actual,
     getGlobalCliClient: vi.fn().mockResolvedValue({
+      request: globalTestClient.request,
       users: {
         getById: mocks.getById,
       } as never,
@@ -57,6 +65,9 @@ const defaultMocks = {
 describe('#init: oclif command setup', () => {
   afterEach(() => {
     vi.clearAllMocks()
+    const pending = pendingMocks()
+    cleanAll()
+    expect(pending, 'pending mocks').toEqual([])
   })
 
   test.each([
@@ -66,7 +77,6 @@ describe('#init: oclif command setup', () => {
     {flag1: 'env=.env', flag2: 'bare'},
     {flag1: 'git=test', flag2: 'bare'},
     {flag1: 'no-git', flag2: 'git=test'},
-    {flag1: 'output-path=/test-path', flag2: 'bare'},
     {flag1: 'package-manager=pnpm', flag2: 'bare'},
     {flag1: 'template=test', flag2: 'bare'},
     {flag1: 'typescript', flag2: 'bare'},
@@ -88,6 +98,38 @@ describe('#init: oclif command setup', () => {
       `--${name2}=${value2} cannot also be provided when using --${name1}`,
     )
     expect(error?.oclif?.exit).toBe(2)
+  })
+
+  test('throws error with hint when --create-project is used without a value', async () => {
+    const {error} = await testCommand(InitCommand, ['--create-project'], {
+      mocks: {
+        isInteractive: true,
+        token: 'test-token',
+      },
+    })
+
+    expect(error).toBeInstanceOf(Error)
+    expect(error?.message).toContain(
+      'Flag --create-project expects a value. Use --project-name instead:',
+    )
+    expect(error?.message).toContain('[Hint]')
+    expect(error?.message).toContain('sanity init --project-name')
+    expect(error?.oclif?.exit).toBe(2)
+  })
+
+  test('throws error with hint when --bare and --output-path are both passed', async () => {
+    const {error} = await testCommand(InitCommand, ['--bare', '--output-path=/test-path'], {
+      mocks: {
+        isInteractive: true,
+        token: 'test-token',
+      },
+    })
+
+    expect(error).toBeInstanceOf(Error)
+    expect(error?.message).toContain('--bare cannot be used with --output-path')
+    expect(error?.message).toContain('[Hint]')
+    expect(error?.message).toContain('sanity init --bare --project-name')
+    expect(error?.oclif?.exit).toBe(1)
   })
 
   test.each([
@@ -230,11 +272,19 @@ describe('#init: oclif command setup', () => {
     )
   })
 
-  test('throws error when in unattended mode and `project` and `project-name` not set', async () => {
+  test('does not throw when project flags omitted in unattended mode — project name is derived', async () => {
     mocks.detectFrameworkRecord.mockResolvedValueOnce({
       name: 'Next.js',
       slug: 'nextjs',
     })
+
+    // With derived projectName, init proceeds to org resolution. We don't need to mock
+    // the full happy path — empty orgs returns the new descriptive error from task #2,
+    // which proves the original "must be specified" throw is gone.
+    mockApi({
+      apiVersion: ORGANIZATIONS_API_VERSION,
+      uri: '/organizations',
+    }).reply(200, [])
 
     const {error} = await testCommand(
       InitCommand,
@@ -250,32 +300,9 @@ describe('#init: oclif command setup', () => {
       },
     )
 
-    expect(error?.message).toContain(
+    expect(error?.message ?? '').not.toContain(
       '`--project <id>` or `--project-name <name>` must be specified in unattended mode',
     )
-    expect(error?.oclif?.exit).toBe(1)
-  })
-
-  test('throws error when in unattended mode and `project-name` set without `organization`', async () => {
-    mocks.detectFrameworkRecord.mockResolvedValueOnce({
-      name: 'Next.js',
-      slug: 'nextjs',
-    })
-
-    const {error} = await testCommand(
-      InitCommand,
-      ['--yes', '--dataset=production', '--project-name=test'],
-      {
-        mocks: {
-          ...defaultMocks,
-        },
-      },
-    )
-
-    expect(error?.message).toContain(
-      '`--project-name` requires `--organization <id>` in unattended mode',
-    )
-    expect(error?.oclif?.exit).toBe(1)
   })
 
   test('logs properly if app template flag is not valid', async () => {

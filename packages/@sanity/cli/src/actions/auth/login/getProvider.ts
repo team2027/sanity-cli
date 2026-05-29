@@ -3,6 +3,7 @@ import {input, spinner, type SpinnerInstance} from '@sanity/cli-core/ux'
 
 import {promptForProviders} from '../../../prompts/promptForProviders.js'
 import {getProviders, getVercelProviderUrl} from '../../../services/auth.js'
+import {formatHint} from '../../../util/formatHint.js'
 import {type LoginProvider} from '../types.js'
 import {getSSOProvider} from './getSSOProvider.js'
 
@@ -71,8 +72,8 @@ export async function getProvider({
 
     if (!isInteractive() && realProviderNames.length > 1) {
       throw new Error(
-        `Multiple login providers available: ${realProviderNames.join(', ')}. ` +
-          'Use `--provider <name>` to select one in unattended mode.',
+        `Multiple login providers available: ${realProviderNames.join(', ')}.` +
+          formatHint(`sanity login --provider ${realProviderNames[0]}`),
       )
     }
 

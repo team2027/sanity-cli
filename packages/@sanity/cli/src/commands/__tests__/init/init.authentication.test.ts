@@ -183,8 +183,9 @@ describe('#init: authentication', () => {
     expect(stdout).toContain('You are logged in as test@example.com using SAML')
   })
 
-  test('throws error if user is authenticated with invalid token in unattended mode', async () => {
+  test('auto-triggers login when not authenticated with invalid token in unattended mode', async () => {
     mockGetById.mockRejectedValueOnce(createHttpError(401, 'Unauthorized'))
+    mockLogin.mockRejectedValueOnce(new Error('No providers available'))
 
     const {error} = await testCommand(InitCommand, ['--yes', '--dataset=test', '--project=test'], {
       mocks: {
@@ -192,9 +193,8 @@ describe('#init: authentication', () => {
       },
     })
 
-    expect(error?.message).toContain(
-      'Must be logged in to run this command in unattended mode, run `sanity login`',
-    )
+    expect(mockLogin).toHaveBeenCalled()
+    expect(error?.message).toContain('Login failed')
     expect(error?.oclif?.exit).toBe(1)
   })
 

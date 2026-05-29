@@ -14,6 +14,7 @@ export default {
   },
   plugins: ['@oclif/plugin-help', '@sanity/runtime-cli', '@sanity/migrate', '@sanity/codegen'],
   topics: {
+    auth: {description: 'Manage authentication'},
     backups: {description: 'Manage dataset backups'},
     cors: {description: 'Manage CORS origins for your project'},
     datasets: {description: 'Manage datasets in your project'},
@@ -25,6 +26,7 @@ export default {
     mcp: {description: 'Configure Sanity MCP server for AI editors'},
     media: {description: 'Manage media assets and aspect definitions'},
     openapi: {description: 'Manage OpenAPI specifications'},
+    organizations: {description: 'Manage Sanity organizations'},
     projects: {description: 'Manage Sanity projects'},
     schemas: {description: 'Manage and validate schemas'},
     telemetry: {description: 'Manage telemetry consent'},

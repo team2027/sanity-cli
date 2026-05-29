@@ -1,3 +1,5 @@
+import {readFile} from 'node:fs/promises'
+import path from 'node:path'
 import {styleText} from 'node:util'
 
 import {type SanityOrgUser, subdebug, type TelemetryUserProperties} from '@sanity/cli-core'
@@ -10,6 +12,7 @@ import {promptForConfigFiles} from '../../prompts/init/nextjs.js'
 import {getCliUser} from '../../services/user.js'
 import {CLIInitStepCompleted, type InitStepResult} from '../../telemetry/init.telemetry.js'
 import {detectFrameworkRecord} from '../../util/detectFramework.js'
+import {formatHint} from '../../util/formatHint.js'
 import {getProjectDefaults} from '../../util/getProjectDefaults.js'
 import {validateSession} from '../auth/ensureAuthenticated.js'
 import {getProviderName} from '../auth/getProviderName.js'
@@ -83,8 +86,28 @@ export async function initAction(options: InitOptions, context: InitContext): Pr
 
   const isAppTemplate = options.template ? determineAppTemplate(options.template) : false
 
+  let effectiveProjectName = options.projectName
+  if (options.unattended && !isAppTemplate && !options.project && !effectiveProjectName) {
+    const derived = await deriveProjectName(workDir)
+    if (derived) {
+      debug('Deriving --project-name from %s: %s', derived.source, derived.name)
+      effectiveProjectName = derived.name
+    }
+  }
+
+  if (options.bare && options.outputPath) {
+    throw new InitError(
+      '--bare cannot be used with --output-path. Use --bare to create the project only, then scaffold the studio separately.' +
+        formatHint(
+          'sanity init --bare --project-name "my-project" --dataset production -y',
+          'sanity init --project <id> --output-path ./studio -y',
+        ),
+      1,
+    )
+  }
+
   if (options.unattended) {
-    checkFlagsInUnattendedMode(options, {isAppTemplate, isNextJs})
+    checkFlagsInUnattendedMode(options, {effectiveProjectName, isAppTemplate, isNextJs})
   }
 
   trace.start()
@@ -117,13 +140,14 @@ export async function initAction(options: InitOptions, context: InitContext): Pr
   }
 
   let newProject: string | undefined
-  if (options.projectName) {
+  if (effectiveProjectName) {
     newProject = await createProjectFromName({
       coupon: options.coupon,
-      createProjectName: options.projectName,
+      createProjectName: effectiveProjectName,
       dataset: options.dataset,
       organization: options.organization,
       planId,
+      unattended: options.unattended,
       user,
       visibility: options.visibility,
     })
@@ -278,25 +302,28 @@ export async function initAction(options: InitOptions, context: InitContext): Pr
 
 function checkFlagsInUnattendedMode(
   options: InitOptions,
-  {isAppTemplate, isNextJs}: {isAppTemplate: boolean; isNextJs: boolean},
+  {
+    effectiveProjectName,
+    isAppTemplate,
+    isNextJs,
+  }: {effectiveProjectName: string | undefined; isAppTemplate: boolean; isNextJs: boolean},
 ): void {
   debug('Unattended mode, validating required options')
-
-  if (options.projectName && !options.organization) {
-    throw new InitError('`--project-name` requires `--organization <id>` in unattended mode', 1)
-  }
 
   if (isAppTemplate) {
     if (!options.outputPath) {
       throw new InitError('`--output-path` must be specified in unattended mode', 1)
     }
 
-    const hasProjectFlag = Boolean(options.project || options.projectName)
+    const hasProjectFlag = Boolean(options.project || effectiveProjectName)
 
     if (!hasProjectFlag && !options.organization) {
       throw new InitError(
         'The --organization flag is required for app templates in unattended mode. ' +
-          'Use --organization <id>, or pass --project <id> / --project-name <name>.',
+          'Use --organization <id>, or pass --project <id> / --project-name <name>.' +
+          formatHint(
+            'sanity init --organization <org-id> --template <template> --output-path ./app -y',
+          ),
         1,
       )
     }
@@ -305,15 +332,47 @@ function checkFlagsInUnattendedMode(
   }
 
   if (!isNextJs && !options.bare && !options.outputPath) {
-    throw new InitError('`--output-path` must be specified in unattended mode', 1)
-  }
-
-  if (!options.project && !options.projectName) {
     throw new InitError(
-      '`--project <id>` or `--project-name <name>` must be specified in unattended mode',
+      '`--output-path` must be specified in unattended mode' +
+        formatHint('sanity init --output-path ./studio --project <id> --dataset production -y'),
       1,
     )
   }
+
+  if (!options.project && !effectiveProjectName) {
+    throw new InitError(
+      '`--project <id>` or `--project-name <name>` must be specified in unattended mode' +
+        formatHint('sanity init --project-name "my-project" --dataset production -y'),
+      1,
+    )
+  }
+}
+
+async function deriveProjectName(
+  workDir: string,
+): Promise<{name: string; source: 'directory' | 'package.json'} | undefined> {
+  try {
+    const raw = await readFile(path.join(workDir, 'package.json'), 'utf8')
+    const parsed: unknown = JSON.parse(raw)
+    if (
+      parsed &&
+      typeof parsed === 'object' &&
+      'name' in parsed &&
+      typeof parsed.name === 'string' &&
+      parsed.name.trim().length > 0
+    ) {
+      return {name: parsed.name.trim(), source: 'package.json'}
+    }
+  } catch {
+    // package.json missing or unreadable — fall through to basename
+  }
+
+  const basename = path.basename(workDir)
+  if (basename) {
+    return {name: basename, source: 'directory'}
+  }
+
+  return undefined
 }
 
 async function ensureAuthenticated(
@@ -332,10 +391,39 @@ async function ensureAuthenticated(
   }
 
   if (options.unattended) {
-    throw new InitError(
-      'Must be logged in to run this command in unattended mode, run `sanity login`',
-      1,
+    output.log('Not logged in — starting background authentication...')
+    try {
+      await login({
+        output,
+        telemetry: trace.newContext('login'),
+      })
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+      throw new InitError(`Login failed: ${message}`, 1)
+    }
+
+    // Background login returns immediately; poll for the token
+    const maxWait = 120_000
+    const interval = 3000
+    const deadline = Date.now() + maxWait
+    let loggedInUser: SanityOrgUser | null = null
+    while (Date.now() < deadline) {
+      loggedInUser = await validateSession()
+      if (loggedInUser) break
+      await new Promise((r) => setTimeout(r, interval))
+    }
+
+    if (!loggedInUser) {
+      throw new InitError(
+        'Authentication timed out. Complete the browser login and retry, or set the SANITY_AUTH_TOKEN environment variable.',
+        1,
+      )
+    }
+
+    output.log(
+      `${logSymbols.success} You are logged in as ${loggedInUser.email} using ${getProviderName(loggedInUser.provider)}`,
     )
+    return {user: loggedInUser}
   }
 
   trace.log({step: 'login'})

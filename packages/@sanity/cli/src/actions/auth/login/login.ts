@@ -2,20 +2,21 @@ import {
   type CLITelemetryStore,
   getCliToken,
   getUserConfig,
+  isInteractive,
   type Output,
-  setCliUserConfig,
   subdebug,
 } from '@sanity/cli-core'
 import {spinner} from '@sanity/cli-core/ux'
-import {isHttpError} from '@sanity/client'
 import open from 'open'
 
-import {logout} from '../../../services/auth.js'
 import {LoginTrace} from '../../../telemetry/login.telemetry.js'
 import {canLaunchBrowser} from '../../../util/canLaunchBrowser.js'
 import {startServerForTokenCallback} from '../authServer.js'
+import {getBackgroundLoginConfigPath, startBackgroundLogin} from '../backgroundLogin.js'
+import {validateSession} from '../ensureAuthenticated.js'
 import {getProvider} from './getProvider.js'
-import {isSanityApiToken, validateToken} from './validateToken.js'
+import {storeAuthToken} from './storeAuthToken.js'
+import {validateToken} from './validateToken.js'
 
 const debug = subdebug('login')
 
@@ -30,6 +31,7 @@ interface LoginOptions {
   sso?: string
   ssoProvider?: string
   token?: string
+  wait?: boolean
 }
 
 /**
@@ -75,21 +77,77 @@ export async function login(options: LoginOptions) {
     throw new Error('No authentication providers found')
   }
 
+  // In non-interactive mode (CI, containers, AI agents), self-background the
+  // callback server so the CLI returns immediately. The browser-agent or user
+  // completes OAuth in the background; the token is written to config when the
+  // callback fires. The caller can retry `sanity init` until auth succeeds.
+  if (!isInteractive()) {
+    // Pre-populate telemetryDisclosed so the next CLI command's prerun hook
+    // doesn't do a read-modify-write that clobbers the token the child writes.
+    const userConfig = getUserConfig()
+    if (!userConfig.get('telemetryDisclosed')) {
+      userConfig.set('telemetryDisclosed', Date.now())
+    }
+
+    const shouldOpen = options.open !== false
+    const {loginUrl, pid, port} = await startBackgroundLogin(provider.url, {open: shouldOpen})
+
+    if (shouldOpen) {
+      output.log(`\nOpening browser at ${loginUrl}\n`)
+    } else {
+      output.log(`\nPlease open a browser at ${loginUrl}\n`)
+    }
+    debug('Background login child PID %d listening on port %d', pid, port)
+
+    if (options.wait) {
+      output.log(
+        `Authentication is running in the background. Waiting for the user to complete the login in their browser...\n`,
+      )
+      const maxWait = 300_000
+      const interval = 3000
+      const deadline = Date.now() + maxWait
+      while (Date.now() < deadline) {
+        const user = await validateSession()
+        if (user) {
+          output.log(`Logged in as ${user.email}.`)
+          trace.complete()
+          return
+        }
+        await new Promise((r) => setTimeout(r, interval))
+      }
+      throw new Error(
+        'Login timed out after 5 minutes. Run `sanity auth status` to check, or `sanity auth cancel` to stop.',
+      )
+    }
+
+    output.log(`Authentication is running in the background.`)
+    output.log(
+      `Wait for the user to complete the login in their browser. Token saves to ${getBackgroundLoginConfigPath()} when done.`,
+    )
+    output.log('')
+    output.log(`Wait ~30-60 seconds, then check: sanity auth status`)
+    output.log(`To switch providers or cancel: sanity auth cancel`)
+    output.log(`Or rerun with \`--wait\` to block until login completes.\n`)
+
+    trace.complete()
+    return
+  }
+
   const {loginUrl, server, token: tokenPromise} = await startServerForTokenCallback(provider.url)
 
   trace.log({step: 'waitForToken'})
 
   // Open a browser on the login page (or tell the user to)
   const shouldLaunchBrowser = canLaunchBrowser() && options.open !== false
-  const actionText = shouldLaunchBrowser ? 'Opening browser at' : 'Please open a browser at'
-
-  output.log(`\n${actionText} ${loginUrl.href}\n`)
-
-  const spin = spinner('Waiting for browser login to complete... Press Ctrl + C to cancel').start()
 
   if (shouldLaunchBrowser) {
     open(loginUrl.href)
+    output.log(`\nOpening browser at ${loginUrl.href}\n`)
+  } else {
+    output.log(`\nPlease open a browser at ${loginUrl.href}\n`)
   }
+
+  const spin = spinner('Waiting for browser login to complete... Press Ctrl + C to cancel').start()
 
   // Wait for a success/error on the HTTP callback server
   let authToken: string
@@ -110,34 +168,4 @@ export async function login(options: LoginOptions) {
   await storeAuthToken(authToken, previousToken, output)
 
   trace.complete()
-}
-
-async function storeAuthToken(
-  authToken: string,
-  previousToken: string | undefined,
-  output: Output,
-) {
-  setCliUserConfig('authToken', authToken)
-  getUserConfig().delete('telemetryConsent')
-
-  // If we had a session previously, attempt to clear it
-  if (previousToken && previousToken !== authToken) {
-    await invalidateAuthToken(previousToken, output)
-  }
-}
-
-async function invalidateAuthToken(token: string, output: Output) {
-  try {
-    if (await isSanityApiToken(token)) return
-  } catch (err) {
-    if (isHttpError(err) && err.statusCode === 401) return
-  }
-
-  try {
-    await logout(token)
-  } catch (err) {
-    if (!isHttpError(err) || err.statusCode !== 401) {
-      output.warn('Failed to invalidate previous session')
-    }
-  }
 }

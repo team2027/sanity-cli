@@ -1,12 +1,17 @@
-import {mockApi, testCommand} from '@sanity/cli-test'
+import {createTestToken, mockApi, testCommand} from '@sanity/cli-test'
 import {cleanAll, pendingMocks} from 'nock'
-import {afterEach, describe, expect, test} from 'vitest'
+import {afterEach, beforeEach, describe, expect, test, vi} from 'vitest'
 
 import {PROJECTS_API_VERSION} from '../../../services/projects.js'
 import {List} from '../list.js'
 
 describe('#list', () => {
+  beforeEach(() => {
+    createTestToken('test-token')
+  })
+
   afterEach(() => {
+    vi.unstubAllEnvs()
     const pending = pendingMocks()
     cleanAll()
     expect(pending, 'pending mocks').toEqual([])
@@ -122,6 +127,97 @@ describe('#list', () => {
     // Check the order (ascending)
     expect(line2023_01_01).toBeLessThan(line2023_01_02)
     expect(line2023_01_02).toBeLessThan(line2023_01_03)
+  })
+
+  test('outputs JSON when --json is specified', async () => {
+    const projects = [
+      {
+        createdAt: '2023-01-01',
+        displayName: 'Project One',
+        id: 'project1',
+        members: ['user1', 'user2'],
+      },
+      {
+        createdAt: '2023-01-02',
+        displayName: 'Project Two',
+        id: 'project2',
+        members: ['user1'],
+      },
+    ]
+
+    mockApi({
+      apiVersion: PROJECTS_API_VERSION,
+      query: {onlyExplicitMembership: 'true'},
+      uri: '/projects',
+    }).reply(200, projects)
+
+    const {stdout} = await testCommand(List, ['--json'])
+
+    const parsed = JSON.parse(stdout)
+    // Default sort is created desc
+    expect(parsed).toEqual([
+      {
+        created: '2023-01-02',
+        id: 'project2',
+        members: 1,
+        name: 'Project Two',
+        url: 'https://www.sanity.io/manage/project/project2',
+      },
+      {
+        created: '2023-01-01',
+        id: 'project1',
+        members: 2,
+        name: 'Project One',
+        url: 'https://www.sanity.io/manage/project/project1',
+      },
+    ])
+  })
+
+  test('applies sort and order to JSON output', async () => {
+    mockApi({
+      apiVersion: PROJECTS_API_VERSION,
+      query: {onlyExplicitMembership: 'true'},
+      uri: '/projects',
+    }).reply(200, [
+      {
+        createdAt: '2023-01-01',
+        displayName: 'Project One',
+        id: 'project1',
+        members: ['user1', 'user2', 'user3'],
+      },
+      {
+        createdAt: '2023-01-02',
+        displayName: 'Project Two',
+        id: 'project2',
+        members: ['user1'],
+      },
+      {
+        createdAt: '2023-01-03',
+        displayName: 'Project Three',
+        id: 'project3',
+        members: ['user1', 'user2'],
+      },
+    ])
+
+    const {stdout} = await testCommand(List, ['--json', '--sort', 'members', '--order', 'asc'])
+
+    const parsed = JSON.parse(stdout)
+    expect(parsed).toHaveLength(3)
+    expect(parsed[0].members).toBe(1)
+    expect(parsed[1].members).toBe(2)
+    expect(parsed[2].members).toBe(3)
+  })
+
+  test('displays auth error with hint when not logged in', async () => {
+    vi.unstubAllEnvs()
+
+    const {error} = await testCommand(List)
+
+    expect(error).toBeInstanceOf(Error)
+    expect(error?.message).toContain('Not logged in')
+    expect(error?.message).toContain('sanity login')
+    expect(error?.message).toContain('[Hint]')
+    expect(error?.oclif?.exit).toBe(1)
   })
 
   test('displays an error if the API request fails', async () => {
