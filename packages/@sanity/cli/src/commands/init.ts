@@ -10,7 +10,15 @@ import {getSanityEnv} from '../util/getSanityEnv.js'
 
 export class InitCommand extends SanityCommand<typeof InitCommand> {
   static override args = {type: Args.string({hidden: true})}
-  static override description = 'Initialize a new Sanity Studio, project and/or app'
+  static override description = `Initialize a new Sanity Studio, project and/or app.
+
+Common usage (unattended):
+  sanity init -y --project-name "my-app" --dataset production --output-path ./studio
+  sanity init -y --bare --project-name "my-app" --organization <id>
+  sanity init -y --project <existing-id> --dataset production --output-path .
+
+If multiple organizations or providers exist, the CLI prints the IDs with a
+copy-pasteable hint. Run 'sanity organizations list' to discover IDs.`
   static override enableJsonFlag = true
 
   static override examples = [
@@ -53,6 +61,7 @@ export class InitCommand extends SanityCommand<typeof InitCommand> {
         'Optionally select a coupon for a new project (cannot be used with --project-plan)',
       exclusive: ['project-plan'],
       helpValue: '<code>',
+      hidden: true,
     }),
     'create-project': Flags.string({
       deprecated: {message: 'Use --project-name instead'},
@@ -95,11 +104,13 @@ export class InitCommand extends SanityCommand<typeof InitCommand> {
       allowNo: true,
       default: undefined,
       description: 'Import template sample dataset',
+      hidden: true,
     }),
     mcp: Flags.boolean({
       allowNo: true,
       default: true,
       description: 'Enable AI editor integration (MCP) setup',
+      hidden: true,
     }),
     'nextjs-add-config-files': Flags.boolean({
       allowNo: true,
@@ -139,6 +150,7 @@ export class InitCommand extends SanityCommand<typeof InitCommand> {
       allowNo: true,
       default: undefined,
       description: 'Overwrite existing files',
+      hidden: true,
     }),
     'package-manager': Flags.string({
       description: 'Specify which package manager to use [allowed: npm, yarn, pnpm]',
@@ -160,6 +172,7 @@ export class InitCommand extends SanityCommand<typeof InitCommand> {
     'project-plan': Flags.string({
       description: 'Optionally select a plan for a new project',
       helpValue: '<name>',
+      hidden: true,
     }),
     provider: Flags.string({
       description: 'Login provider to use',

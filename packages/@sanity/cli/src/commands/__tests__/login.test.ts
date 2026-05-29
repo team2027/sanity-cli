@@ -1321,7 +1321,7 @@ describe('#login', {timeout: 10_000}, () => {
         providers: [{name: 'google', title: 'Google', url: 'https://api.sanity.io/auth/google'}],
       })
 
-      const {error, stdout} = await testCommand(LoginCommand, [])
+      const {error, stdout} = await testCommand(LoginCommand, ['--no-wait'])
 
       if (error) throw error
       expect(stdout).toContain('Opening browser at')
@@ -1344,7 +1344,7 @@ describe('#login', {timeout: 10_000}, () => {
         providers: [{name: 'google', title: 'Google', url: 'https://api.sanity.io/auth/google'}],
       })
 
-      const {error, stdout} = await testCommand(LoginCommand, ['--no-open'])
+      const {error, stdout} = await testCommand(LoginCommand, ['--no-open', '--no-wait'])
 
       if (error) throw error
       expect(stdout).toContain('Please open a browser at')
