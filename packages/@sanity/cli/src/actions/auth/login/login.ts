@@ -13,6 +13,7 @@ import {LoginTrace} from '../../../telemetry/login.telemetry.js'
 import {canLaunchBrowser} from '../../../util/canLaunchBrowser.js'
 import {startServerForTokenCallback} from '../authServer.js'
 import {getBackgroundLoginConfigPath, startBackgroundLogin} from '../backgroundLogin.js'
+import {validateSession} from '../ensureAuthenticated.js'
 import {getProvider} from './getProvider.js'
 import {storeAuthToken} from './storeAuthToken.js'
 import {validateToken} from './validateToken.js'
@@ -30,6 +31,7 @@ interface LoginOptions {
   sso?: string
   ssoProvider?: string
   token?: string
+  wait?: boolean
 }
 
 /**
@@ -96,6 +98,28 @@ export async function login(options: LoginOptions) {
       output.log(`\nPlease open a browser at ${loginUrl}\n`)
     }
     debug('Background login child PID %d listening on port %d', pid, port)
+
+    if (options.wait) {
+      output.log(
+        `Authentication is running in the background. Waiting for the user to complete the login in their browser...\n`,
+      )
+      const maxWait = 300_000
+      const interval = 3000
+      const deadline = Date.now() + maxWait
+      while (Date.now() < deadline) {
+        const user = await validateSession()
+        if (user) {
+          output.log(`Logged in as ${user.email}.`)
+          trace.complete()
+          return
+        }
+        await new Promise((r) => setTimeout(r, interval))
+      }
+      throw new Error(
+        'Login timed out after 5 minutes. Run `sanity auth status` to check, or `sanity auth cancel` to stop.',
+      )
+    }
+
     output.log(`Authentication is running in the background.`)
     output.log(
       `Wait for the user to complete the login in their browser. Token saves to ${getBackgroundLoginConfigPath()} when done.`,
@@ -103,7 +127,7 @@ export async function login(options: LoginOptions) {
     output.log('')
     output.log(`Wait ~30-60 seconds, then check: sanity auth status`)
     output.log(`To switch providers or cancel: sanity auth cancel`)
-    output.log(`Do not run other sanity commands until \`sanity auth status\` confirms login.\n`)
+    output.log(`Or rerun with \`--wait\` to block until login completes.\n`)
 
     trace.complete()
     return

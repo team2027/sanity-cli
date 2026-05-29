@@ -9,7 +9,7 @@ import {fileURLToPath} from 'node:url'
 import {subdebug} from '@sanity/cli-core'
 
 const debug = subdebug('login:background')
-const CHILD_TIMEOUT_MS = 150_000
+const CHILD_TIMEOUT_MS = 300_000
 const PIDFILE_TTL_MS = CHILD_TIMEOUT_MS + 10_000
 
 export function getBackgroundLoginConfigPath(): string {

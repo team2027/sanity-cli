@@ -21,7 +21,7 @@ import {startServerForTokenCallback} from './authServer.js'
 import {getBackgroundLoginConfigPath, writeBackgroundLoginPidFile} from './backgroundLogin.js'
 import {storeAuthToken} from './login/storeAuthToken.js'
 
-const TIMEOUT_MS = 150_000
+const TIMEOUT_MS = 300_000
 
 const providerUrl = process.argv[2]
 if (!providerUrl) {

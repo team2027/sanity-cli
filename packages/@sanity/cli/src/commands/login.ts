@@ -68,6 +68,10 @@ authenticated, this completes in seconds.`
       description: 'Select a specific SSO provider by name (use with --sso)',
       helpValue: '<name>',
     }),
+    wait: Flags.boolean({
+      default: false,
+      description: 'Block until login completes (up to 5 minutes). Recommended for agents and CI.',
+    }),
     'with-token': Flags.boolean({
       description: 'Read token from standard input',
       exclusive: ['provider', 'sso'],
@@ -89,7 +93,7 @@ authenticated, this completes in seconds.`
         token,
       })
 
-      if (isInteractive() || token) {
+      if (isInteractive() || token || flags.wait) {
         this.log('Login successful')
       }
     } catch (error) {
