@@ -43,6 +43,11 @@ copy-pasteable hint. Run 'sanity organizations list' to discover IDs.`
         '<%= config.bin %> <%= command.id %> -y --project-name "Movies Unlimited" --dataset moviedb --visibility private --template moviedb --output-path /Users/espenh/movies-unlimited',
       description: 'Create a brand new project with name "Movies Unlimited"',
     },
+    {
+      command: 'cd my-studio && sanity typegen generate',
+      description:
+        'After init, generate TypeScript types from your schema (avoid hand-writing interfaces)',
+    },
   ] satisfies Array<Command.Example>
 
   static override flags = {
