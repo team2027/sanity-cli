@@ -1,4 +1,5 @@
 import {
+  clearCliTokenCache,
   type CLITelemetryStore,
   getCliToken,
   getUserConfig,
@@ -107,6 +108,10 @@ export async function login(options: LoginOptions) {
       const interval = 3000
       const deadline = Date.now() + maxWait
       while (Date.now() < deadline) {
+        // The background child writes the new token to disk in a separate
+        // process, which can't invalidate this process's in-memory token cache.
+        // Clear the cache so validateSession re-reads from disk each iteration.
+        clearCliTokenCache()
         const user = await validateSession()
         if (user) {
           output.log(`Logged in as ${user.email}.`)
