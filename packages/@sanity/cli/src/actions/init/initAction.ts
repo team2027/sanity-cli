@@ -2,7 +2,12 @@ import {readFile} from 'node:fs/promises'
 import path from 'node:path'
 import {styleText} from 'node:util'
 
-import {type SanityOrgUser, subdebug, type TelemetryUserProperties} from '@sanity/cli-core'
+import {
+  clearCliTokenCache,
+  type SanityOrgUser,
+  subdebug,
+  type TelemetryUserProperties,
+} from '@sanity/cli-core'
 import {logSymbols, spinner} from '@sanity/cli-core/ux'
 import {type TelemetryTrace} from '@sanity/telemetry'
 import {type Framework, frameworks} from '@vercel/frameworks'
@@ -402,12 +407,15 @@ async function ensureAuthenticated(
       throw new InitError(`Login failed: ${message}`, 1)
     }
 
-    // Background login returns immediately; poll for the token
+    // Background login returns immediately; poll for the token. The child
+    // writes to disk in another process, so clear the in-memory cache each
+    // iteration to force a fresh disk read.
     const maxWait = 120_000
     const interval = 3000
     const deadline = Date.now() + maxWait
     let loggedInUser: SanityOrgUser | null = null
     while (Date.now() < deadline) {
+      clearCliTokenCache()
       loggedInUser = await validateSession()
       if (loggedInUser) break
       await new Promise((r) => setTimeout(r, interval))

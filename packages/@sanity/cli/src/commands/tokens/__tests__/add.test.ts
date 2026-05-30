@@ -93,6 +93,7 @@ describe('#tokens:add', () => {
     expect(stdout).toContain('Role: Viewer')
     expect(stdout).toContain('Token: sk_test_abcd1234')
     expect(stdout).toContain('Copy the token above')
+    expect(stdout).toContain('SANITY_API_TOKEN=sk_test_abcd1234')
   })
 
   test('creates token with specific role', async () => {

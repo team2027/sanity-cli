@@ -69,8 +69,9 @@ authenticated, this completes in seconds.`
       helpValue: '<name>',
     }),
     wait: Flags.boolean({
-      default: false,
-      description: 'Block until login completes (up to 5 minutes). Recommended for agents and CI.',
+      allowNo: true,
+      description:
+        'Block until login completes (up to 5 minutes). Defaults to true in non-interactive contexts (CI, agents); pass `--no-wait` to opt out.',
     }),
     'with-token': Flags.boolean({
       description: 'Read token from standard input',
@@ -82,6 +83,12 @@ authenticated, this completes in seconds.`
     const {flags} = await this.parse(LoginCommand)
     const {'sso-provider': ssoProvider, 'with-token': withToken, ...loginFlags} = flags
 
+    // Default `--wait` to true when not interactive and not using --with-token,
+    // so agents and CI get a deterministic exit code without having to discover
+    // the flag. Pass `--no-wait` to opt out.
+    const effectiveWait =
+      typeof flags.wait === 'boolean' ? flags.wait : !isInteractive() && !withToken
+
     try {
       const token = withToken ? await readTokenFromStdin() : undefined
 
@@ -91,9 +98,10 @@ authenticated, this completes in seconds.`
         ssoProvider,
         telemetry: this.telemetry,
         token,
+        wait: effectiveWait,
       })
 
-      if (isInteractive() || token || flags.wait) {
+      if (isInteractive() || token || effectiveWait) {
         this.log('Login successful')
       }
     } catch (error) {

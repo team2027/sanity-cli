@@ -99,6 +99,9 @@ export class AddTokenCommand extends SanityCommand<typeof AddTokenCommand> {
       this.log(`Token: ${token.key}`)
       this.log('')
       this.log('Copy the token above – this is your only chance to do so!')
+      this.log('')
+      this.log('Add to .env (or your environment) for use with @sanity/client:')
+      this.log(`  SANITY_API_TOKEN=${token.key}`)
     } catch (error) {
       const err = error as Error
 
