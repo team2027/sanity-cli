@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.3.4](https://github.com/sanity-io/cli/compare/cli-core-v1.3.3...cli-core-v1.3.4)
+
+_2026-06-03_
+
+### Bug Fixes
+
+- ensure babel-plugin-react-compiler is a peer dependency ([#1175](https://github.com/sanity-io/cli/pull/1175)) ([d2de934](https://github.com/sanity-io/cli/commit/d2de934fa3bfbe3d82ca37ad9db3eae567677a4b))
+- **deps:** update dependency get-it to ^8.7.2 ([#1174](https://github.com/sanity-io/cli/pull/1174)) ([e704aaa](https://github.com/sanity-io/cli/commit/e704aaa2c8c4b2adee38d8a776f1156f34e92fe3))
+
+## [1.3.3](https://github.com/sanity-io/cli/compare/cli-core-v1.3.2...cli-core-v1.3.3)
+
+_2026-06-02_
+
+### Bug Fixes
+
+- add missing changeset for `@sanity/cli-core` ([#1153](https://github.com/sanity-io/cli/pull/1153)) ([ef5b390](https://github.com/sanity-io/cli/commit/ef5b390a439ca8612584ce1c3c1f7d4dbab8172f))
+
 ## [1.3.2](https://github.com/sanity-io/cli/compare/cli-core-v1.3.1...cli-core-v1.3.2)
 
 _2026-05-07_

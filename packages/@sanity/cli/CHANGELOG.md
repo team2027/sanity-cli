@@ -1,5 +1,66 @@
 # Change Log
 
+## [6.7.2](https://github.com/sanity-io/cli/compare/cli-v6.7.1...cli-v6.7.2)
+
+_2026-06-03_
+
+### Bug Fixes
+
+- ensure babel-plugin-react-compiler is a peer dependency ([#1175](https://github.com/sanity-io/cli/pull/1175)) ([d2de934](https://github.com/sanity-io/cli/commit/d2de934fa3bfbe3d82ca37ad9db3eae567677a4b))
+- **deps:** update oclif-tooling ([#1161](https://github.com/sanity-io/cli/pull/1161)) ([b8bc554](https://github.com/sanity-io/cli/commit/b8bc55407d18517e64aba9e8553ddb1fd8316d16))
+- **deps:** update sanity-tooling ([#1163](https://github.com/sanity-io/cli/pull/1163)) ([5313459](https://github.com/sanity-io/cli/commit/5313459399be83686d500d1fb3b1fc19483cebcd))
+- **deps:** Update react monorepo to ^19.2.6 ([#1173](https://github.com/sanity-io/cli/pull/1173)) ([c847618](https://github.com/sanity-io/cli/commit/c8476184695ec6331abefd8dfb3f8ad2402d6e55))
+
+### Dependencies
+
+- The following workspace dependencies were updated
+  - dependencies
+    - @sanity/cli-core bumped to 1.3.4
+    - @sanity/cli-build bumped to 0.2.2
+
+## [6.7.1](https://github.com/sanity-io/cli/compare/cli-v6.7.0...cli-v6.7.1)
+
+_2026-06-02_
+
+### Bug Fixes
+
+- add missing changeset for `@sanity/cli-core` ([#1153](https://github.com/sanity-io/cli/pull/1153)) ([ef5b390](https://github.com/sanity-io/cli/commit/ef5b390a439ca8612584ce1c3c1f7d4dbab8172f))
+
+### Dependencies
+
+- The following workspace dependencies were updated
+  - dependencies
+    - @sanity/cli-core bumped to 1.3.3
+    - @sanity/cli-build bumped to 0.2.1
+
+## [6.7.0](https://github.com/sanity-io/cli/compare/cli-v6.6.0...cli-v6.7.0)
+
+_2026-06-02_
+
+### Features
+
+- Configure Sanity MCP and install the `sanity-best-practices` agent skill for detected AI editors in a single step during `sanity init`. Add `--no-skills` to opt out. ([#1079](https://github.com/sanity-io/cli/pull/1079)) ([3ffeda3](https://github.com/sanity-io/cli/commit/3ffeda3b69506958084fe40b1cf8ed5bcf7f29a7))
+- **templates:** add page-builder template using @sanity/presets ([#1084](https://github.com/sanity-io/cli/pull/1084)) ([0c0fea4](https://github.com/sanity-io/cli/commit/0c0fea4b292d4c54ada57e3aab1425c76a0613b6))
+- **dataset export:** add no-strict-asset-verification flag ([#1135](https://github.com/sanity-io/cli/pull/1135)) ([96f0646](https://github.com/sanity-io/cli/commit/96f06469a774b6ec8d21a41de3d0c6cba8f59558))
+
+### Bug Fixes
+
+- **mcp:** use oauth for claude code config ([#1118](https://github.com/sanity-io/cli/pull/1118)) ([7d2118d](https://github.com/sanity-io/cli/commit/7d2118d4509f4d0a7406b1e262d17f4b531d1d07))
+- **cli:** move @sanity/ui to devDependencies ([#1105](https://github.com/sanity-io/cli/pull/1105)) ([b9185e6](https://github.com/sanity-io/cli/commit/b9185e6d4a2231cfc6f6f9397655c16c68c10aa6))
+- **docs:** reject lookalike docs url hosts ([#1098](https://github.com/sanity-io/cli/pull/1098)) ([85980d2](https://github.com/sanity-io/cli/commit/85980d21912ef81dd8d2953c2a6c1439089452fd))
+- Prevent listing lowercase env vars as included in JS bundle ([#1094](https://github.com/sanity-io/cli/pull/1094)) ([a4419d2](https://github.com/sanity-io/cli/commit/a4419d2f90c85e3ba49f86f1b6874eff1eab0894))
+- update sanity cors add copy ([#1095](https://github.com/sanity-io/cli/pull/1095)) ([0c23d7d](https://github.com/sanity-io/cli/commit/0c23d7d290936b4aa37554539b9a3662155eb145))
+- **deps:** update sanity-tooling ([#1114](https://github.com/sanity-io/cli/pull/1114)) ([9352799](https://github.com/sanity-io/cli/commit/9352799b195e2ae45012133799fe3d387363b671))
+- **login:** allow ctrl-c to cancel browser login ([#1126](https://github.com/sanity-io/cli/pull/1126)) ([e5684b2](https://github.com/sanity-io/cli/commit/e5684b292a7f654b9e0981a7a32805caab71c6aa))
+- Prevent buildStudio from running shouldAutoUpdate a second time ([#1092](https://github.com/sanity-io/cli/pull/1092)) ([3266303](https://github.com/sanity-io/cli/commit/32663033f74550b017c688a46d24c69d85f7f098))
+- update @sanity/codegen to ^6.1.0 ([#1065](https://github.com/sanity-io/cli/pull/1065)) ([5b4d3c0](https://github.com/sanity-io/cli/commit/5b4d3c089fce9266552982808bb5f2457fd50cf8))
+
+### Dependencies
+
+- The following workspace dependencies were updated
+  - dependencies
+    - @sanity/cli-build bumped to 0.2.0
+
 ## [6.6.0](https://github.com/sanity-io/cli/compare/cli-v6.5.3...cli-v6.6.0)
 
 _2026-05-18_
